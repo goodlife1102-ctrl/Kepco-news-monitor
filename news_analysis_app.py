@@ -73,7 +73,7 @@ TOPIC_GROUPS = {
     "AI·디지털혁신":["AI","인공지능","디지털","스마트","자동화","AX","빅데이터"],
     "공기업·거버넌스":["공기업","감사","이사회","투명","거버넌스","윤리","비리"],
     "고객·서비스":["서비스","고객","민원","복지","국민","전기복지"],
-    "정책·규제":["정책","규제","법안","제도","정부","국회","의원","경찰","조사","소송"],
+    "정책·규제":["정책","규제","법안","제도","정부","국회","의원","경찰","조사","소송","패소"],
 }
 DISAMBIG_MAP = {"김동철":["한전","사장","한국전력","KEPCO"],"김성환":["장관","산업부"]}
 
@@ -94,7 +94,7 @@ INSIGHT_DB = {
             "취약계층 에너지 복지 수혜자 수 수치화·언론 제공",
             "요금 억제 시 국가 재무 왜곡 시뮬레이션 공개",
         ],
-        "msg": "오늘의 요금 억제는 내일의 더 큰 이자 부담으로 돌아옵니다.",
+        "msg": "오늘의 요금 억제는 미래세대의 더 큰 이자 부담으로 돌아옵니다.",
     },
     "재무·경영": {
         "bg": "사상 최대 부채 보도는 공기업 신뢰도를 직격. 흑자 전환 시에도 '성찰 없는 성과급' 비판이 역풍으로 작용.",
@@ -109,7 +109,7 @@ INSIGHT_DB = {
             "부동산 매각·조직 효율화 구체 사례 스토리화",
             "경제지 전담 관계 강화 및 정기 백브리핑 개최",
         ],
-        "msg": "부채의 늪을 건너는 유일한 길은 뼈를 깎는 자구 노력과 요금 정상화뿐입니다.",
+        "msg": "뼈를 깎는 자구 노력과 요금 정상화로 재무건전성을 높이겠습니다.",
     },
     "전력망·설비": {
         "bg": "송전망 건설 지연은 반도체·산단 공급 차질로 이어지며 국익 이슈로 확산. 지역 반발과 지자체 인허가 거부가 복합 리스크.",
@@ -142,7 +142,7 @@ INSIGHT_DB = {
             "협력사 안전 지원 예산·이행 현황 정량 공개",
             "드론 순시·산불 예방 투자 실적 적극 홍보",
         ],
-        "msg": "안전은 효율보다 소중합니다. 사람이 먼저인 현장을 만들겠습니다.",
+        "msg": "안전은 타협할 수 없는 가치이자, 한전의 상식입니다.",
     },
     "노사관계": {
         "bg": "파업 결의는 공공서비스 안정성 우려로 즉각 확산. MZ세대 이탈·희망퇴직 반발이 내부 리스크로 중첩.",
@@ -159,7 +159,7 @@ INSIGHT_DB = {
             "노사 협상 진행 현황 정기 공개(루머 차단)",
             "MZ세대 조직 문화 개선 카드뉴스 SNS 배포",
         ],
-        "msg": "어떤 순간에도 대한민국 전력의 심장은 멈추지 않습니다.",
+        "msg": "세계 최고 수준의 전기품질을 계속 유지하겠습니다.",
     },
     "탄소중립·에너지전환": {
         "bg": "신재생 전환 지연과 계통 불안정 비판이 이행 속도 논란으로 확산. RE100·OECD 비교가 국제 압박 채널로 작동.",
@@ -183,7 +183,7 @@ INSIGHT_DB = {
             ("저가 수주 덤핑 논란", "Team Korea 압도적 시공 역량과 경제성 데이터로 정면 반박."),
             ("기술 유출·안전 우려", "국제 인증 현황·안전 기준 구체 자료 즉시 공개."),
         ],
-        "action": "바라카 On-Time·On-Budget 성공 사례 집중 레퍼런스. 계약·협상 현황 정기 업데이트로 불확실성 해소.",
+        "action": "바라카 성공 사례 집중 레퍼런스. 계약·협상 현황 정기 업데이트로 불확실성 해소.",
         "steps": [
             "바라카 원전 성공 사례·국제 인증 자료 지속 노출",
             "수출 협상 진행 상황 정기 업데이트 공개",
@@ -236,7 +236,7 @@ INSIGHT_DB = {
             "AI 챗봇 24/7 대응 체계 구축 사실 홍보",
             "취약계층 수혜자 수·전수조사 결과 수치화",
         ],
-        "msg": "단 한 가구의 불도 꺼지지 않도록 꼼꼼히 살피겠습니다.",
+        "msg": "100% 서비스 기업으로 거듭난겠습니다.",
     },
     "정책·규제": {
         "bg": "경찰 조사·소송은 기관 이미지에 즉각 타격. 정부 정책과의 엇박자 논란은 공기업 존재 가치를 흔드는 이슈로 확산.",
@@ -368,7 +368,7 @@ CRISIS_EXECUTION_STRATEGY = [
             ("정책 전문 숏폼 콘텐츠 제작", "어려운 에너지 정책·요금 체계를 1분 영상으로 제작. MZ세대 소통 접점 확대."),
             ("AI 챗봇 24/7 위기대응 FAQ", "위기 시 대량 고객 문의에 AI를 활용한 정확하고 일관된 정보 실시간 제공."),
             ("소셜 리스닝 기반 맞춤형 메시지 송출", "온라인 논란 키워드 분석 후 직접적 해답을 주는 콘텐츠 배포."),
-            ("사내 인플루언서(앰배서더) 육성", "현장 직원의 목소리로 한전 노고와 진정성을 전달하는 친근한 브랜딩 콘텐츠 강화."),
+            ("사내 인플루언서(e-튜버) 육성", "현장 직원의 목소리로 한전 노고와 진정성을 전달하는 친근한 브랜딩 콘텐츠 강화."),
         ],
     },
     {
@@ -379,7 +379,7 @@ CRISIS_EXECUTION_STRATEGY = [
             ("CEO 전사 위기관리 타운홀 미팅", "위기 상황에서 사장이 직접 직원들에게 경영 현황 공유. 주인의식 고취 소통의 장 마련."),
             ("위기 대응 매뉴얼 현장 전파 교육", "홍보처 외 전 사업소 실무자가 위기 시 행동 요령 숙지. 정기 모의 훈련 실시."),
             ("글로벌 에너지 솔루션 기업 이미지 제고", "원전 수출·해외 사업 성과 집중 홍보. 내부 구성원 자부심 고취 및 대외 신뢰도 향상."),
-            ("사후 평가 시스템(AAR) 도입", "위기 종료 후 대응 과정 정밀 분석·백서 발간. 다음 위기 대응 자산으로 축적."),
+            ("사후 평가 시스템 도입", "위기 종료 후 대응 과정 정밀 분석·백서 발간. 다음 위기 대응 자산으로 축적."),
         ],
     },
 ]
@@ -404,7 +404,7 @@ def gen_criticisms(arts, kw):
         "탄소중립·에너지전환":{"title":"탄소중립 이행 실효성","points":["이행 속도 저조 지적","전환 비용 현실성 논란"],"category":"탄소중립·에너지전환"},
         "정책·규제":{"title":"정책 투명성·법적 리스크","points":["일방적 정책 추진 지적","경찰 조사·소송 리스크"],"category":"정책·규제"},
         "원전·수출":{"title":"원전 수출 신뢰성","points":["추진 일정 지연·불확실성","안전 기준 논란"],"category":"원전·수출"},
-        "AI·디지털혁신":{"title":"디지털 전환 실효성","points":["투자 대비 성과 부족","보안·개인정보 리스크"],"category":"AI·디지털혁신"},
+        "AI·디지털혁신":{"title":"디지털 전환 실효성","points":["투자 대비 성과 부족","보안·개인정보 노출"],"category":"AI·디지털혁신"},
         "고객·서비스":{"title":"고객 서비스 대응 미흡","points":["민원 처리 속도 불만","소외계층 접근성 개선 요구"],"category":"고객·서비스"},
     }
     result=[]
@@ -468,7 +468,7 @@ def auto_cat(arts):
         sc={k:v for k,v in sc.items() if v>0}
         a["카테고리"]=max(sc,key=sc.get) if sc else "기타"
     return arts
-def extract_kws(arts,sent,n=5):
+def extract_kws(arts,sent,n=3):
     ft=[a for a in arts if a["감성"]==sent]
     txt=" ".join([a["헤드라인"]+" "+a.get("요약","") for a in ft])
     pool=(NEGATIVE_WORDS if sent=="부정" else POSITIVE_WORDS)
@@ -547,6 +547,13 @@ def plot_wordcloud(df):
     items = sorted(word_data.items(), key=lambda x: -x[1][1])[:28]
     max_cnt = items[0][1][1] if items else 1
 
+    # 단어별 대표 헤드라인 사전 구성
+    word_headlines = {}
+    for word, (sent, cnt) in dict(items).items():
+        mask = df['헤드라인'].str.contains(word, na=False, regex=False)
+        sample = df[mask]['헤드라인'].head(3).tolist()
+        word_headlines[word] = sample
+
     xs, ys, texts, sizes, cols, hover = [0], [0], ['한국전력'], [48], ['#003366'], [f'한국전력 | 총 {len(df)}건']
     angle_step = 2.399; r_step = 0.15; base_r = 0.45
     for i, (word, (sent, cnt)) in enumerate(items):
@@ -558,7 +565,9 @@ def plot_wordcloud(df):
         color = '#C62828' if sent == '부정' else '#1565C0'
         xs.append(x); ys.append(y); texts.append(word)
         sizes.append(size); cols.append(color)
-        hover.append(f'{word} | {sent} | {cnt}회')
+        headlines = word_headlines.get(word, [])
+        hl_lines = "<br>".join([f"· {h[:28]}" for h in headlines]) if headlines else "헤드라인 없음"
+        hover.append(f'<b>{word}</b> | {sent} | {cnt}회<br>──────────<br>{hl_lines}')
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(
@@ -972,88 +981,30 @@ def render_report(cd):
     top_neg_m=", ".join([f"{m}({n}건)" for m,n in neg_media_top.items()]) if not neg_media_top.empty else "해당없음"
 
     # ─ 헤더 ─
-    hc1, hc2 = st.columns([5,1])
-    with hc1:
-        st.markdown(f"""<div style='background:#003366;color:white;padding:10px 16px;border-radius:5px;font-family:{FONT_KR};'>
-        <span style='font-size:15px;font-weight:700;'>{label}</span>
-        <span style='font-size:11px;opacity:.75;margin-left:10px;'>{period_str} | 총 {total}건</span>
-        <span style='float:right;font-size:20px;font-weight:900;color:{pr_c};'>{pr_s}점</span>
-        <span style='float:right;font-size:10px;color:rgba(255,255,255,.7);margin-right:6px;margin-top:4px;'>PR리스크</span>
-        </div>""", unsafe_allow_html=True)
-    with hc2:
-        wb=make_full_word(cd)
-        st.download_button("📄 보고서 워드", data=wb, file_name=f"KEPCO_{label}_{datetime.now().strftime('%Y%m%d')}.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True, key=f"wd_{label}")
+    st.markdown(f"""<div style='background:#003366;color:white;padding:10px 16px;border-radius:5px;font-family:{FONT_KR};margin-bottom:8px;'>
+    <span style='font-size:15px;font-weight:700;'>{label}</span>
+    <span style='font-size:11px;opacity:.75;margin-left:10px;'>{period_str} | 총 {total}건</span>
+    </div>""", unsafe_allow_html=True)
 
     # 위기관리 권고 (조건부)
     show_crisis_recommendation(pr_s, pr_l, label, cd)
 
-    # ═══ 조사 개요 블록 ═══
-    neg_media_list = df[df['감성']=='부정']['매체'].value_counts().head(4)
-    pos_media_list = df[df['감성']=='긍정']['매체'].value_counts().head(3)
-    neu_media_list = df[df['감성']=='중립']['매체'].value_counts().head(3)
-
-    def media_row(mv, color):
-        items = [f"<span style='display:inline-block;background:{color}15;border:1px solid {color}44;border-radius:12px;padding:2px 8px;font-size:10px;color:{color};margin:2px 2px;font-weight:600;'>{m}({n}건)</span>" for m,n in mv.items()]
-        return "".join(items) if items else "<span style='font-size:10px;color:#aaa;'>해당없음</span>"
-
-    neg_media_html = media_row(neg_media_list, "#C62828")
-    pos_media_html = media_row(pos_media_list, "#1565C0")
-    neu_media_html = media_row(neu_media_list, "#555555")
-
-    # 부정 주요 이슈 TOP3
-    neg_cats = df[df['감성']=='부정']['카테고리'].value_counts().head(3)
-    issue_html = "".join([f"<li style='font-size:11px;color:#333;margin-bottom:3px;'><b>{cat}</b> ({n}건)</li>" for cat,n in neg_cats.items()])
-    pos_cats = df[df['감성']=='긍정']['카테고리'].value_counts().head(3)
-    pos_issue_html = "".join([f"<li style='font-size:11px;color:#333;margin-bottom:3px;'><b>{cat}</b> ({n}건)</li>" for cat,n in pos_cats.items()])
-
-    tone_overall = "부정 우세" if neg_n > pos_n*1.5 else "긍정 우세" if pos_n > neg_n*1.5 else "균형"
-    tone_color   = "#C62828" if neg_n > pos_n*1.5 else "#1565C0" if pos_n > neg_n*1.5 else "#555"
-
-    st.markdown(f"""<div style='background:white;border:1px solid #ddd;border-radius:8px;padding:16px 20px;margin-bottom:12px;font-family:{FONT_KR};'>
-  <div style='font-size:16px;font-weight:800;color:#003366;margin-bottom:12px;border-bottom:2px solid #003366;padding-bottom:6px;'>
-    📋 {label} 언론보도 분석 — 조사 개요
-  </div>
-  <div style='display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;'>
-    <div style='flex:1;min-width:140px;background:#F4F6F9;border-radius:6px;padding:10px 14px;'>
-      <div style='font-size:9px;font-weight:700;color:#888;letter-spacing:.8px;margin-bottom:4px;'>조사 기간</div>
-      <div style='font-size:12px;font-weight:700;color:#003366;'>{period_str}</div>
-    </div>
-    <div style='flex:1;min-width:140px;background:#F4F6F9;border-radius:6px;padding:10px 14px;'>
-      <div style='font-size:9px;font-weight:700;color:#888;letter-spacing:.8px;margin-bottom:4px;'>분석 방법</div>
-      <div style='font-size:12px;font-weight:700;color:#003366;'>네이버 뉴스 API<br>키워드·감성 분석</div>
-    </div>
-    <div style='flex:1;min-width:140px;background:#F4F6F9;border-radius:6px;padding:10px 14px;'>
-      <div style='font-size:9px;font-weight:700;color:#888;letter-spacing:.8px;margin-bottom:4px;'>분석 범위</div>
-      <div style='font-size:12px;font-weight:700;color:#003366;'>논조 구분, 매체별 비중<br>키워드·이슈 우선순위</div>
-    </div>
-    <div style='flex:1;min-width:140px;background:#F4F6F9;border-radius:6px;padding:10px 14px;'>
-      <div style='font-size:9px;font-weight:700;color:#888;letter-spacing:.8px;margin-bottom:4px;'>총 수집 기사</div>
-      <div style='font-size:14px;font-weight:800;color:#003366;'>{total}건</div>
-      <div style='font-size:10px;color:{tone_color};font-weight:700;'>{tone_overall} 기조</div>
-    </div>
-  </div>
-  <div style='display:flex;gap:12px;flex-wrap:wrap;'>
-    <div style='flex:2;min-width:200px;'>
-      <div style='font-size:11px;font-weight:800;color:#C62828;margin-bottom:5px;'>🔴 부정 논조 주요 매체 ({neg_n}건 · {neg_rate:.0f}%)</div>
-      <div style='margin-bottom:8px;'>{neg_media_html}</div>
-      <div style='font-size:11px;font-weight:800;color:#1565C0;margin-bottom:5px;'>🔵 긍정 논조 주요 매체 ({pos_n}건 · {pos_rate:.0f}%)</div>
-      <div style='margin-bottom:8px;'>{pos_media_html}</div>
-      <div style='font-size:11px;font-weight:800;color:#555;margin-bottom:5px;'>⚫ 중립 논조 주요 매체 ({neu_n}건 · {neu_n/total*100:.0f}%)</div>
-      <div>{neu_media_html}</div>
-    </div>
-    <div style='flex:1;min-width:160px;'>
-      <div style='font-size:11px;font-weight:800;color:#C62828;margin-bottom:5px;'>주요 비판 이슈</div>
-      <ul style='margin:0;padding-left:14px;'>{issue_html}</ul>
-    </div>
-    <div style='flex:1;min-width:160px;'>
-      <div style='font-size:11px;font-weight:800;color:#1565C0;margin-bottom:5px;'>주요 긍정 이슈</div>
-      <ul style='margin:0;padding-left:14px;'>{pos_issue_html}</ul>
-    </div>
-  </div>
-</div>""", unsafe_allow_html=True)
-
-    # ═══ 00. KPI + 결론 ═══
+    # ═══ 00. KPI + 결론 (서술형 내러티브) ═══
     divider("01 · 요약 및 제언")
+
+    # 내러티브 생성
+    neg_top1_kw = neg_kws[0][0] if neg_kws else "해당없음"
+    tone_desc = ("균형 있는 언론 환경이 유지되고 있습니다" if tone_txt=="균형"
+                 else ("부정 보도가 우세한 위기 국면입니다" if tone_txt=="부정 우세"
+                       else "긍정 보도가 우세한 호의적 환경입니다"))
+    narrative_text = (
+        f"{period_str} 네이버 기사 전체 {total}건을 전수 분석했습니다. "
+        f"기간 내 부정 보도 {neg_rate:.0f}%, 긍정 보도 {pos_rate:.0f}%로 {tone_desc}. "
+        f"'{neg_top1_kw}' 키워드가 부정 보도의 핵심이며 언론 리스크는 {pr_s}점({pr_l})입니다. "
+        f"위기관리 차원에서 선제적 대응과 '{top_neg_cat}' 이슈에 대한 공식 입장 발표가 권고됩니다. "
+        f"반면 '{top_pos_cat}'와 관련한 보도는 긍정적 흐름을 보이고 있어 홍보 자원 집중이 권고됩니다."
+    )
+
     k1,k2,k3,k4,k5,k6=st.columns(6)
     for col,val,lbl,color,sub in [
         (k1,str(total),"총 기사","#003366",trend_txt[:18]),
@@ -1072,18 +1023,12 @@ def render_report(cd):
     with g1:
         st.plotly_chart(plot_pr_gauge(pr_s, pr_c), use_container_width=True, config=cfg())
     with g2:
-        paired0 = gen_paired_insights(criticisms)
-        a0 = paired0[0]['db']['action'] if paired0 else "—"
-        a1 = paired0[1]['db']['action'] if len(paired0)>1 else "—"
-        st.markdown(f"""<div style='background:#F8F9FA;border-left:3px solid #003366;border-radius:0 4px 4px 0;padding:10px 14px;font-size:12px;line-height:1.8;font-family:{FONT_KR};'>
-        <span style='color:#003366;font-weight:700;'>핵심 비판:</span> {top_neg_cat} &nbsp;|&nbsp; <span style='color:#003366;font-weight:700;'>부정 키워드:</span> {neg_kw_str}<br>
-        <span style='color:#003366;font-weight:700;'>부정 집중 매체:</span> {top_neg_m}<br>
-        <span style='color:#003366;font-weight:700;'>결론:</span> {insights_text[:120]}…<br>
-        <span style='color:#C62828;font-weight:700;'>즉각 대응:</span> {a0}
+        st.markdown(f"""<div style='background:#F8F9FA;border-left:3px solid #003366;border-radius:0 4px 4px 0;padding:14px 18px;font-size:12px;line-height:2.0;font-family:{FONT_KR};height:130px;overflow:auto;'>
+        {narrative_text}
         </div>""", unsafe_allow_html=True)
 
-    # ═══ 01. 워드클라우드 ═══
-    divider("02 · 워드클라우드")
+    # ═══ 01. 워드 클라우드 ═══
+    divider("02 · 워드 클라우드")
     wc1, wc2 = st.columns([3,1])
     with wc1:
         fig_wc = plot_wordcloud(df)
@@ -1105,91 +1050,103 @@ def render_report(cd):
     with b2:
         st.plotly_chart(plot_buzz(df), use_container_width=True, config=cfg())
 
-    # ═══ 03. 매체별 논조 ═══
-    divider("04 · 매체별 논조")
-    media_all = df["매체"].value_counts().head(12).index.tolist()
-    media_sorted = sorted(media_all, key=lambda m: (
-        -df[(df["매체"]==m)&(df["감성"]=="부정")].shape[0]/max(1,df[df["매체"]==m].shape[0]),
-        get_media_rank(m)
-    ))
-    rows_m = ""
-    for mname in media_sorted:
-        gi=MEDIA_GRADE.get(mname,{}); grade=gi.get("grade","—"); rate=gi.get("rate",""); gc=GRADE_COLOR.get(grade,"#ccc")
-        n_neg=int(df[(df["매체"]==mname)&(df["감성"]=="부정")].shape[0])
-        n_pos=int(df[(df["매체"]==mname)&(df["감성"]=="긍정")].shape[0])
-        n_tot=int(df[df["매체"]==mname].shape[0])
-        bar=int(n_neg/n_tot*14) if n_tot>0 else 0
-        rows_m+=f"<tr><td style='padding:4px 8px;font-size:11px;'>{mname} <span style='background:{gc};color:white;padding:0 3px;border-radius:2px;font-size:8px;font-weight:700;'>{grade}</span></td><td style='text-align:right;color:#888;font-size:9px;padding:4px 8px;'>{rate}%</td><td style='text-align:center;color:#C62828;font-size:11px;font-weight:600;padding:4px 8px;'>{n_neg}</td><td style='text-align:center;color:#1565C0;font-size:11px;padding:4px 8px;'>{n_pos}</td><td style='padding:4px 8px;font-size:10px;'><span style='color:#C62828;'>{'■'*bar}</span><span style='color:#eee;'>{'■'*(14-bar)}</span></td></tr>"
-    st.markdown(f"""<table style='width:100%;border-collapse:collapse;font-family:{FONT_KR};'>
-    <tr style='background:#003366;color:white;font-size:10px;'><th style='padding:5px 8px;text-align:left;'>매체</th><th style='padding:5px 8px;'>열독률</th><th style='padding:5px 8px;'>부정</th><th style='padding:5px 8px;'>긍정</th><th style='padding:5px 8px;text-align:left;'>부정비중</th></tr>{rows_m}</table>""", unsafe_allow_html=True)
-
-    # ═══ 04. 논조별 키워드 + 클릭 추세 ═══
-    divider("05 · 논조별 키워드 TOP5 — 키워드 클릭 시 추세 분석")
+    # ═══ 04. 키워드 TOP3 + 요주의/우호 매체 (통합) ═══
+    divider("05 · 논조별 키워드 TOP3 · 요주의/우호 매체")
 
     sel_kw_key = f"sel_kw_{label}"
     if sel_kw_key not in st.session_state:
         st.session_state[sel_kw_key] = neg_kws[0][0] if neg_kws else (pos_kws[0][0] if pos_kws else "")
 
-    kc1, kc2 = st.columns(2)
-    with kc1:
-        st.markdown(f"<div style='background:#FFEBEE;border:2px solid #C62828;border-radius:8px 8px 0 0;padding:6px 12px;font-size:12px;font-weight:800;color:#C62828;font-family:{FONT_KR};'>🔴 부정 키워드 TOP5 — 클릭하면 추세 분석</div>", unsafe_allow_html=True)
-        with st.container():
-            btn_cols = st.columns(min(5, len(neg_kws)) if neg_kws else 1)
-            for i, (kw, cnt) in enumerate(neg_kws):
-                with btn_cols[i % len(btn_cols)]:
-                    is_sel = (st.session_state[sel_kw_key] == kw)
-                    label_txt = f"{'▶ ' if is_sel else ''}{kw}\n{cnt}회"
-                    if st.button(label_txt, key=f"neg_kw_{label}_{kw}", use_container_width=True):
-                        st.session_state[sel_kw_key] = kw; st.rerun()
-    with kc2:
-        st.markdown(f"<div style='background:#E3F2FD;border:2px solid #1565C0;border-radius:8px 8px 0 0;padding:6px 12px;font-size:12px;font-weight:800;color:#1565C0;font-family:{FONT_KR};'>🔵 긍정 키워드 TOP5 — 클릭하면 추세 분석</div>", unsafe_allow_html=True)
-        with st.container():
-            btn_cols2 = st.columns(min(5, len(pos_kws)) if pos_kws else 1)
-            for i, (kw, cnt) in enumerate(pos_kws):
-                with btn_cols2[i % len(btn_cols2)]:
-                    is_sel = (st.session_state[sel_kw_key] == kw)
-                    label_txt = f"{'▶ ' if is_sel else ''}{kw}\n{cnt}회"
-                    if st.button(label_txt, key=f"pos_kw_{label}_{kw}", use_container_width=True):
-                        st.session_state[sel_kw_key] = kw; st.rerun()
+    left_col, right_col = st.columns([1, 1])
 
+    with left_col:
+        # 부정 키워드 TOP3
+        st.markdown(f"<div style='background:#FFEBEE;border:2px solid #C62828;border-radius:8px 8px 0 0;padding:6px 12px;font-size:12px;font-weight:800;color:#C62828;font-family:{FONT_KR};'>🔴 부정 키워드 TOP3</div>", unsafe_allow_html=True)
+        neg3 = neg_kws[:3]
+        neg_cols = st.columns(len(neg3)) if neg3 else st.columns(1)
+        for i, (kw, cnt) in enumerate(neg3):
+            with neg_cols[i]:
+                is_sel = (st.session_state[sel_kw_key] == kw)
+                bar_w = int(cnt / max(neg3[0][1], 1) * 100)
+                bg = "#C62828" if is_sel else "white"
+                fg = "white" if is_sel else "#C62828"
+                st.markdown(f"""<div style='border:1px solid #FFCDD2;border-top:none;background:{bg};padding:10px 12px;font-family:{FONT_KR};'>
+  <div style='font-size:15px;font-weight:800;color:{fg};'>{kw}</div>
+  <div style='font-size:11px;color:{"rgba(255,255,255,.8)" if is_sel else "#999"};margin:3px 0;'>{cnt}회</div>
+  <div style='background:{"rgba(255,255,255,.3)" if is_sel else "#f5f5f5"};border-radius:3px;height:4px;margin-bottom:8px;'><div style='background:{"white" if is_sel else "#C62828"};width:{bar_w}%;height:4px;border-radius:3px;'></div></div>
+</div>""", unsafe_allow_html=True)
+                btn_label = "▶" if is_sel else "추세"
+                if st.button(btn_label, key=f"neg_kw_{label}_{kw}", use_container_width=True):
+                    st.session_state[sel_kw_key] = kw; st.rerun()
+
+        st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
+
+        # 긍정 키워드 TOP3
+        st.markdown(f"<div style='background:#E3F2FD;border:2px solid #1565C0;border-radius:8px 8px 0 0;padding:6px 12px;font-size:12px;font-weight:800;color:#1565C0;font-family:{FONT_KR};'>🔵 긍정 키워드 TOP3</div>", unsafe_allow_html=True)
+        pos3 = pos_kws[:3]
+        pos_cols = st.columns(len(pos3)) if pos3 else st.columns(1)
+        for i, (kw, cnt) in enumerate(pos3):
+            with pos_cols[i]:
+                is_sel = (st.session_state[sel_kw_key] == kw)
+                bar_w = int(cnt / max(pos3[0][1], 1) * 100)
+                bg = "#1565C0" if is_sel else "white"
+                fg = "white" if is_sel else "#1565C0"
+                st.markdown(f"""<div style='border:1px solid #BBDEFB;border-top:none;background:{bg};padding:10px 12px;font-family:{FONT_KR};'>
+  <div style='font-size:15px;font-weight:800;color:{fg};'>{kw}</div>
+  <div style='font-size:11px;color:{"rgba(255,255,255,.8)" if is_sel else "#999"};margin:3px 0;'>{cnt}회</div>
+  <div style='background:{"rgba(255,255,255,.3)" if is_sel else "#f5f5f5"};border-radius:3px;height:4px;margin-bottom:8px;'><div style='background:{"white" if is_sel else "#1565C0"};width:{bar_w}%;height:4px;border-radius:3px;'></div></div>
+</div>""", unsafe_allow_html=True)
+                btn_label = "▶" if is_sel else "추세"
+                if st.button(btn_label, key=f"pos_kw_{label}_{kw}", use_container_width=True):
+                    st.session_state[sel_kw_key] = kw; st.rerun()
+
+    with right_col:
+        # 요주의 매체 테이블
+        media_all_r = df["매체"].value_counts()
+        media_with_neg = []
+        for m, tot in media_all_r.items():
+            if tot < 3: continue
+            n_n = int(df[(df["매체"]==m)&(df["감성"]=="부정")].shape[0])
+            n_p = int(df[(df["매체"]==m)&(df["감성"]=="긍정")].shape[0])
+            neg_pct = n_n/tot*100
+            pos_pct = n_p/tot*100
+            gi = MEDIA_GRADE.get(m, {})
+            media_with_neg.append((m, gi, neg_pct, n_n, tot, pos_pct, n_p))
+
+        top_neg_media = sorted(media_with_neg, key=lambda x: -x[2])[:5]
+        top_pos_media = sorted(media_with_neg, key=lambda x: -x[5])[:5]
+
+        def grade_badge(gi):
+            g = gi.get("grade",""); c = GRADE_COLOR.get(g,"#aaa")
+            return f"<span style='background:{c};color:white;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:700;'>{g}</span>" if g else "<span style='background:#ddd;color:#999;padding:1px 5px;border-radius:3px;font-size:9px;'>—</span>"
+
+        neg_rows = "".join([f"<tr><td style='padding:5px 8px;font-size:11px;font-weight:600;'>{m}</td><td style='padding:5px 8px;text-align:center;'>{grade_badge(gi)}</td><td style='padding:5px 8px;text-align:center;font-size:11px;font-weight:700;color:#C62828;'>{neg_pct:.0f}%</td><td style='padding:5px 8px;text-align:center;font-size:11px;color:#C62828;'>{n_n}</td><td style='padding:5px 8px;text-align:center;font-size:11px;color:#888;'>{tot}</td></tr>" for m,gi,neg_pct,n_n,tot,_,_ in top_neg_media])
+        st.markdown(f"""<div style='background:#FFF5F5;border:1.5px solid #FFCDD2;border-radius:8px;padding:10px;margin-bottom:10px;font-family:{FONT_KR};'>
+  <div style='font-size:12px;font-weight:800;color:#C62828;margin-bottom:6px;'>🚨 요주의 매체 (부정 보도 집중)</div>
+  <table style='width:100%;border-collapse:collapse;'>
+    <tr style='background:#FFEBEE;font-size:10px;color:#888;'><th style='padding:4px 8px;text-align:left;'>매체</th><th style='padding:4px 8px;'>등급</th><th style='padding:4px 8px;'>부정%</th><th style='padding:4px 8px;'>부정</th><th style='padding:4px 8px;'>전체</th></tr>
+    {neg_rows}
+  </table>
+</div>""", unsafe_allow_html=True)
+
+        pos_rows = "".join([f"<tr><td style='padding:5px 8px;font-size:11px;font-weight:600;'>{m}</td><td style='padding:5px 8px;text-align:center;'>{grade_badge(gi)}</td><td style='padding:5px 8px;text-align:center;font-size:11px;font-weight:700;color:#1565C0;'>{pos_pct:.0f}%</td><td style='padding:5px 8px;text-align:center;font-size:11px;color:#1565C0;'>{n_p}</td><td style='padding:5px 8px;text-align:center;font-size:11px;color:#888;'>{tot}</td></tr>" for m,gi,_,_,tot,pos_pct,n_p in top_pos_media])
+        st.markdown(f"""<div style='background:#F0F8FF;border:1.5px solid #BBDEFB;border-radius:8px;padding:10px;font-family:{FONT_KR};'>
+  <div style='font-size:12px;font-weight:800;color:#1565C0;margin-bottom:6px;'>✅ 우호 매체 (긍정 보도 집중)</div>
+  <table style='width:100%;border-collapse:collapse;'>
+    <tr style='background:#E3F2FD;font-size:10px;color:#888;'><th style='padding:4px 8px;text-align:left;'>매체</th><th style='padding:4px 8px;'>등급</th><th style='padding:4px 8px;'>긍정%</th><th style='padding:4px 8px;'>긍정</th><th style='padding:4px 8px;'>전체</th></tr>
+    {pos_rows}
+  </table>
+</div>""", unsafe_allow_html=True)
+
+    # 클릭된 키워드 일자별 추세 (월별 탭 없음, 일자별만)
     sel_kw = st.session_state[sel_kw_key]
     if sel_kw:
-        st.markdown(f"<div style='font-size:12px;font-weight:700;color:#003366;margin:8px 0 4px;font-family:{FONT_KR};'>📊 선택 키워드: 「{sel_kw}」 추세 분석</div>", unsafe_allow_html=True)
-        try:
-            df_min_d = datetime.strptime(df['일자'].min(), '%Y-%m-%d').date()
-            df_max_d = datetime.strptime(df['일자'].max(), '%Y-%m-%d').date()
-        except:
-            df_min_d = datetime.now().date()-timedelta(days=30)
-            df_max_d = datetime.now().date()
-
-        trend_key = f"trend_{label}"
-        if trend_key not in st.session_state:
-            st.session_state[trend_key] = {"from": df_min_d, "to": df_max_d, "applied": False}
-
-        dc1, dc2, dc3 = st.columns([2, 2, 1])
-        with dc1:
-            d_from = st.date_input("시작일", st.session_state[trend_key]["from"], key=f"tf_{label}_{sel_kw}")
-        with dc2:
-            d_to = st.date_input("종료일", st.session_state[trend_key]["to"], key=f"tt_{label}_{sel_kw}")
-        with dc3:
-            st.markdown("<div style='padding-top:24px;'>", unsafe_allow_html=True)
-            if st.button("📊 언론노출 추세 확인", key=f"tbtn_{label}_{sel_kw}", use_container_width=True):
-                st.session_state[trend_key] = {"from": d_from, "to": d_to, "applied": True}
-                st.rerun()
-            st.markdown("</div>", unsafe_allow_html=True)
-
-        applied_from = st.session_state[trend_key]["from"]
-        applied_to = st.session_state[trend_key]["to"]
-
-        tt1, tt2 = st.tabs(["📅 월별","📆 일자별"])
-        with tt1:
-            f = plot_kw_trend(df, sel_kw, 'monthly', applied_from, applied_to)
-            if f: st.plotly_chart(f, use_container_width=True, config=cfg())
-            else: st.caption("해당 기간 데이터 없음")
-        with tt2:
-            f = plot_kw_trend(df, sel_kw, 'daily', applied_from, applied_to)
-            if f: st.plotly_chart(f, use_container_width=True, config=cfg())
-            else: st.caption("해당 기간 데이터 없음")
+        st.markdown(f"<div style='font-size:12px;font-weight:700;color:#003366;margin:12px 0 4px;font-family:{FONT_KR};'>📊 「{sel_kw}」 일자별 추세</div>", unsafe_allow_html=True)
+        fig_kw = plot_kw_trend(df, sel_kw, 'daily')
+        if fig_kw:
+            st.plotly_chart(fig_kw, use_container_width=True, config=cfg())
+        else:
+            st.caption("해당 키워드 데이터 없음")
 
     # ═══ 05. 매체×이슈 히트맵 ═══
     divider("06 · 매체×이슈 부정 보도율 — 커서를 셀에 올리면 기사 확인")
@@ -1199,8 +1156,62 @@ def render_report(cd):
     else:
         st.caption("데이터 부족으로 히트맵 생성 불가")
 
-    # ═══ 06. 비판 포인트 레이더 + As-Is/To-Be ═══
-    divider("07 · 비판 포인트 & 대응 전략 — 현황(As-Is) → 전략(To-Be)")
+    # ═══ 06. 위기관리 키워드 추세 (부정 Top1, 최근 3개월 일자별) ═══
+    top_crisis_kw = neg_kws[0][0] if neg_kws else None
+    if top_crisis_kw:
+        divider(f"07 · 위기관리 키워드 추세 — 「{top_crisis_kw}」 최근 3개월 일별 노출")
+        crisis_end = datetime.now()
+        crisis_start = crisis_end - timedelta(days=90)
+        with st.spinner(f"'{top_crisis_kw}' 최근 3개월 데이터 수집 중..."):
+            crisis_raw = get_news(top_crisis_kw, 3000)
+        crisis_records = []
+        for a in crisis_raw:
+            pub = a.get("pubDate","")
+            try:
+                ad = datetime.strptime(pub[:16], "%a, %d %b %Y").date()
+                if not (crisis_start.date() <= ad <= crisis_end.date()): continue
+                ds = ad.strftime("%Y-%m-%d")
+            except:
+                ds = pub[:10]
+            title = clean(a.get("title",""))
+            if not is_relevant(title): continue
+            crisis_records.append({"일자": ds})
+        if crisis_records:
+            cdf = pd.DataFrame(crisis_records)
+            daily_crisis = cdf.groupby("일자").size().reset_index(name="건수")
+            daily_crisis["dt"] = pd.to_datetime(daily_crisis["일자"])
+            all_days = pd.date_range(crisis_start, crisis_end, freq='D')
+            daily_full = pd.DataFrame({"dt": all_days})
+            daily_full["일자"] = daily_full["dt"].dt.strftime("%Y-%m-%d")
+            daily_merged = daily_full.merge(daily_crisis[["일자","건수"]], on="일자", how="left").fillna(0)
+            daily_merged["건수"] = daily_merged["건수"].astype(int)
+
+            fig_crisis = go.Figure()
+            fig_crisis.add_trace(go.Scatter(
+                x=daily_merged["dt"],
+                y=daily_merged["건수"],
+                mode="lines+markers",
+                line=dict(color="#C62828", width=2),
+                marker=dict(size=4, color="#C62828"),
+                fill="tozeroy",
+                fillcolor="rgba(198,40,40,0.08)",
+                hovertemplate="%{x|%m월 %d일} · %{y}회 노출<extra></extra>",
+            ))
+            fig_crisis.update_layout(
+                plot_bgcolor="white", paper_bgcolor="white",
+                font=dict(family=FONT_KR, size=11),
+                margin=dict(l=40, r=10, t=10, b=40), height=240,
+                hovermode="x unified",
+                xaxis=dict(tickformat="%m/%d", showgrid=False, tickangle=-30,
+                           dtick=7*86400000, tickmode="linear"),
+                yaxis=dict(showgrid=True, gridcolor="#f5f5f5", rangemode="tozero"),
+            )
+            st.plotly_chart(fig_crisis, use_container_width=True, config=cfg())
+        else:
+            st.caption("최근 3개월 해당 키워드 데이터 없음")
+
+    # ═══ 07. 비판 포인트 레이더 + As-Is/To-Be ═══
+    divider("08 · 비판 포인트 & 대응 전략 — 현황(As-Is) → 전략(To-Be)")
     paired = gen_paired_insights(criticisms)
 
     # 레이더차트: 카테고리별 부정 건수 기반 6각형
@@ -1286,7 +1297,7 @@ def render_report(cd):
             c = item["criticism"]
             dots_str = "●"*c["dots"]+"○"*(5-c["dots"])
             pts_html = "  /  ".join(c["points"])
-            st.markdown(f"""<div style='border:1px solid #FFCDD2;border-top:none;background:#FFF8F8;padding:10px 14px;margin-bottom:3px;font-family:{FONT_KR};'>
+            st.markdown(f"""<div style='border:1px solid #FFCDD2;border-top:none;background:#FFF8F8;padding:10px 14px;margin-bottom:3px;font-family:{FONT_KR};height:90px;overflow:hidden;'>
   <div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;'>
     <span style='font-size:12px;font-weight:700;color:#C62828;'>이슈 {i}. {c["title"]}</span>
     <span style='font-size:10px;color:#C62828;letter-spacing:1px;'>{dots_str}</span>
@@ -1298,7 +1309,7 @@ def render_report(cd):
         for i, item in enumerate(paired, 1):
             db = item["db"]
             steps_html = "  /  ".join(db["steps"][:2])
-            st.markdown(f"""<div style='border:1px solid #BBDEFB;border-top:none;background:#F0F8FF;padding:10px 14px;margin-bottom:3px;font-family:{FONT_KR};'>
+            st.markdown(f"""<div style='border:1px solid #BBDEFB;border-top:none;background:#F0F8FF;padding:10px 14px;margin-bottom:3px;font-family:{FONT_KR};height:90px;overflow:hidden;'>
   <div style='font-size:12px;font-weight:700;color:#1565C0;margin-bottom:4px;'>전략 {i}. {db["action"]}</div>
   <div style='font-size:11px;color:#555;margin-bottom:5px;'>{steps_html}</div>
   <div style='font-size:11px;background:white;border-left:3px solid #003366;padding:4px 8px;color:#003366;font-weight:700;'>📌 {db["msg"]}</div>
@@ -1309,7 +1320,7 @@ def render_report(cd):
     neu_cnt = int(df['감성'].value_counts().get('중립',0))
     pos_cnt = int(df['감성'].value_counts().get('긍정',0))
     count_html = f" <span style='font-size:12px;font-weight:400;color:#888;'>🔴 부정 {neg_cnt} · 🟡 중립 {neu_cnt} · 🟢 긍정 {pos_cnt} · 총 {total}건</span>"
-    divider("08 · 기사 목록", count_html)
+    divider("09 · 기사 목록", count_html)
 
     fdf = df.copy()
     fdf['_rank'] = fdf['매체'].apply(get_media_rank)
@@ -1395,14 +1406,13 @@ with st.sidebar:
         with kc1s: keywords_input = st.text_input("🔍 키워드 (Enter=분석)", "한국전력", placeholder="키워드 입력 후 Enter")
         with kc2s:
             st.markdown("<div style='padding-top:24px;'>", unsafe_allow_html=True)
-            run = st.form_submit_button("🚀", use_container_width=True)
+            run = st.form_submit_button("Go", use_container_width=True)
             st.markdown("</div>", unsafe_allow_html=True)
         st.caption("쉼표(,)=개별  |  플러스(+)=동시포함")
         cs1,cs2 = st.columns(2)
         with cs1: start_date = st.date_input("시작일", datetime.now()-timedelta(days=7))
         with cs2: end_date = st.date_input("종료일", datetime.now())
         max_articles = st.select_slider("수집 기사 수", [500,1000,2000,3000,5000], value=1000)
-        crisis_input = st.text_input("🚨 위기 키워드", "전기요금 폭탄,정전,파업,감사원")
     st.markdown("---")
     if st.session_state.history:
         st.markdown("**📋 분석 이력**")
@@ -1411,12 +1421,12 @@ with st.sidebar:
             active=(st.session_state.active_key==h['cache_key'])
             if st.button(f"{'▶ ' if active else ''}#{i} {h['keyword']}\n{h['period']} | 부정{nr:.0f}%", key=f"hb_{i}", use_container_width=True):
                 st.session_state.active_key=h['cache_key']; st.rerun()
-    else: st.caption("분석 후 이력이 쌓입니다")
+    else: st.caption(기존 분석 내용)
 
 if run:
     st.session_state.active_key = None
     kw_groups = parse_kw(keywords_input)
-    crisis_kws = [k.strip() for k in crisis_input.split(",") if k.strip()]
+    crisis_kws = ["전기요금 폭탄","정전","파업","감사원","수사","비리","횡령","사망","폭발"]
     all_res = []
     for g in kw_groups:
         lbl = g["label"]
@@ -1435,7 +1445,7 @@ if run:
                 if g["type"]=="AND" and not matches_and(text,g): continue
                 media=get_media(orig,link); gi=MEDIA_GRADE.get(media,{})
                 all_res.append({"키워드그룹":lbl,"일자":ds,"월":ds[:7],"시간":hs,"매체":media,"등급":gi.get("grade","—"),"열독률":gi.get("rate",0.05),"헤드라인":title,"요약":summarize(desc,30),"감성":get_sentiment(text),"카테고리":"","기자":"—","링크":orig if orig else link})
-    if not all_res: st.error("수집된 기사가 없습니다."); st.stop()
+    if not all_res: st.error("수집된 기사가 없습니다. 문제를 해결하세요."); st.stop()
     all_res = auto_cat(all_res)
     all_res = [a for item in [apply_disambig([a],a["키워드그룹"]) for a in all_res] for a in item]
     df_all = pd.DataFrame(all_res)
@@ -1487,4 +1497,4 @@ else:
                 if st.button("열람", key=f"v_{i}", use_container_width=True):
                     st.session_state.active_key=h['cache_key']; st.rerun()
     else:
-        st.markdown(f"""<div style='text-align:center;padding:50px;color:#aaa;font-family:{FONT_KR};'><div style='font-size:32px;'>⚡</div><div style='font-size:15px;font-weight:600;color:#003366;margin-top:8px;'>한국전력 뉴스 유형분석 자동화 시스템</div><div style='font-size:12px;margin-top:6px;'>좌측 키워드 입력 후 🚀 클릭</div></div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div style='text-align:center;padding:50px;color:#aaa;font-family:{FONT_KR};'><div style='font-size:32px;'>⚡</div><div style='font-size:15px;font-weight:600;color:#003366;margin-top:8px;'>한국전력 뉴스 유형분석 자동화 시스템</div><div style='font-size:12px;margin-top:6px;'>좌측 키워드 입력 후 GO 클릭</div></div>""", unsafe_allow_html=True)
