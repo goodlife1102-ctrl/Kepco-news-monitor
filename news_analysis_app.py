@@ -20,6 +20,7 @@ try:
 except:
     YF_OK = False
 
+# ── 보안: API 키는 Streamlit Secrets에서 로드 ──────────
 CLIENT_ID     = st.secrets["NAVER_CLIENT_ID"]
 CLIENT_SECRET = st.secrets["NAVER_CLIENT_SECRET"]
 FONT_KR = "'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', Arial, sans-serif"
@@ -76,20 +77,312 @@ TOPIC_GROUPS = {
 }
 DISAMBIG_MAP = {"김동철":["한전","사장","한국전력","KEPCO"],"김성환":["장관","산업부"]}
 
+# ── INSIGHT DB: 이슈별 PR 전략 (문서4 기반 전면 보강) ──────────────────
 INSIGHT_DB = {
-    "전기요금":{"bg":"요금 인상 이슈는 소비자 민감도 최상위. 언론 집중 공세 대상.","action":"원가회수율·에너지복지 데이터 팩트시트 배포 및 취약계층 지원 성과 수치화","steps":["원가 회수율·지원 가구 수 팩트시트 즉시 배포","취약계층 전기요금 지원 성과 수치화","핵심 언론 1:1 설명회 개최"],"msg":"감정이 아닌 숫자(원가회수율, 지원가구수)로 설득하라."},
-    "재무·경영":{"bg":"부채·적자 보도는 공기업 신뢰도 직격. 투자자·여론 이중 영향.","action":"흑자전환·부채 감축 실적 정량 데이터 선제 공개","steps":["흑자 전환·부채 감축 실적 정량 보도자료","경영 효율화 구체 사례 스토리","경제지 전담 관계 강화"],"msg":"'얼마나 줄었나'를 먼저 말하라. 과거 대비 개선폭이 핵심."},
-    "노사관계":{"bg":"파업·갈등 이슈는 공공서비스 안정성 우려로 확산되는 전형적 패턴.","action":"협상 진행 현황 정기 브리핑으로 루머 선제 차단","steps":["협상 진행 상황 정기 브리핑","공공서비스 안정 유지 메시지 선점","노사 공동 성명 화해 시그널 제공"],"msg":"침묵은 최악. 협상 중이라도 '소통하고 있다'는 사실을 보여라."},
-    "공기업·거버넌스":{"bg":"감사·비리 보도는 기관 전체 신뢰도 훼손. 확산 속도 빠름.","action":"감사 결과 자진 공개 및 윤리경영 조치사항 적극 홍보","steps":["감사 결과 자진 공개로 선제 대응","윤리경영 구체 조치 언론 제공","외부 감사 제3자 검증 활용"],"msg":"숨기면 더 크게 터진다. 먼저 공개하는 것이 신뢰 전략."},
-    "안전·사고":{"bg":"안전사고는 사회적 충격이 크고 언론이 가장 오래 추적하는 이슈.","action":"사고 원인·재발방지책 48시간 내 공식 발표","steps":["사고 원인·재발방지책 48시간 내 공식 발표","현장 안전 투자 금액·건수 데이터 제공","협력업체 안전망 확대 조치 동시 발표"],"msg":"'얼마나 빨리, 얼마나 구체적으로' 대응하느냐가 2차 피해를 막는다."},
-    "전력망·설비":{"bg":"노후 설비·정전 보도는 국민 생활 직결. 반복 이슈화 위험.","action":"설비 현대화 로드맵 및 투자 계획 수치 중심 공개","steps":["투자 계획·진행 현황 수치 중심 보도자료","정전 원인 신속 공개 및 복구 타임라인 제시","스마트그리드·디지털 전환 성과 홍보"],"msg":"'문제 있다'는 언론보다 '우리가 먼저 알고 고치고 있다'가 우선."},
-    "탄소중립·에너지전환":{"bg":"이행 속도 논란은 국제 기준·정부 정책과 연계돼 압박 수위 상승.","action":"온실가스 감축 실적 및 재생에너지 투자 정량 공개","steps":["온실가스 감축 실적 정량 공개","재생에너지 투자·발전량 구체 수치 제시","국제 협약 대비 성과 비교 자료 제공"],"msg":"추상적 목표보다 '작년 대비 몇% 줄었다'는 구체 숫자가 신뢰를 만든다."},
-    "정책·규제":{"bg":"경찰·소송 관련 보도는 기관 이미지에 즉각적 타격. 법적 리스크 동반.","action":"법무팀 공식 입장 즉시 발표 및 조사 협조 의지 메시지 선점","steps":["법무팀 공식 입장 즉시 발표","사실 관계 오보 정정 요청 적극 집행","조사 협조 의지·투명성 강조 메시지 선점"],"msg":"'법적 대응'보다 '적극 협조·투명하게 소명' 메시지가 여론에 유리."},
-    "원전·수출":{"bg":"수출 지연·안전 논란은 국가 신인도와 연계돼 국제적 관심 이슈.","action":"원전 수출 계약·협상 진행 상황 정기 업데이트 공개","steps":["계약·협상 진행 상황 정기 업데이트","안전 기준·국제 인증 현황 구체 자료","UAE 바라카 성공 사례 집중 레퍼런스"],"msg":"불확실성이 비판을 낳는다. 알려줄 수 있는 정보는 먼저 알려라."},
-    "AI·디지털혁신":{"bg":"투자 대비 성과 불명확 시 예산 낭비 비판으로 이어짐.","action":"AI 도입 전후 효율 지표 수치 비교 보도자료 배포","steps":["AI 도입 전후 효율 지표 수치 비교","구체적 서비스 개선 사례(응답시간, 오류율) 제시","보안·개인정보 보호 조치 별도 홍보"],"msg":"'AI 도입'이 아니라 '덕분에 이렇게 달라졌다'는 Before-After 스토리가 효과적."},
-    "고객·서비스":{"bg":"민원·서비스 불만은 SNS 확산이 빠르고 감정적 반응 유발.","action":"민원 처리 속도·만족도 지표 공개 및 취약계층 서비스 사례 강조","steps":["민원 처리 속도·만족도 지표 공개","취약계층 특화 서비스 사례 강조","24시간 대응 체계 구축 사실 홍보"],"msg":"민원 통계보다 '실제 해결된 사람의 이야기'가 언론에 더 잘 먹힌다."},
+    "전기요금": {
+        "bg": "요금 인상 이슈는 소비자 민감도 최상위. 물가 자극·부채·성과급 비판이 복합적으로 작동.",
+        "sub_issues": [
+            ("물가 자극 비판", "인상의 불가피성을 '국가적 비용' 관점에서 설명. 억제 시 채권 발행·금융 왜곡 데이터 제시."),
+            ("200조+ 부채 보도", "부채 증가 속도 둔화·자구 대책 달성률을 헤드라인으로 추출."),
+            ("연료비 연동제 유보 논란", "유보의 사회적 비용(미수금 증가)을 시각화. 정부 협의 현황 강조."),
+            ("OECD 요금 비교", "세계 최저 수준 요금과 에너지 안보 위기를 연계한 팩트시트 배포."),
+            ("흑자 전환 시 성과급 비판", "외부 요인(연료비 하락) 겸허 인정, 흑자분 부채 상환 우선 투입 명시."),
+        ],
+        "action": "요금 억제의 '숨겨진 비용' 시각화 자료 선제 배포. OECD 비교 팩트시트·미수금 누적 데이터 출입기자단 정기 제공.",
+        "steps": [
+            "원가 회수율·OECD 비교 팩트시트 즉시 배포",
+            "취약계층 에너지 복지 수혜자 수 수치화·언론 제공",
+            "요금 억제 시 국가 재무 왜곡 시뮬레이션 공개",
+        ],
+        "msg": "오늘의 요금 억제는 내일의 더 큰 이자 부담으로 돌아옵니다.",
+    },
+    "재무·경영": {
+        "bg": "사상 최대 부채 보도는 공기업 신뢰도를 직격. 흑자 전환 시에도 '성찰 없는 성과급' 비판이 역풍으로 작용.",
+        "sub_issues": [
+            ("사상 최대 부채 보도", "누적 부채액보다 '부채 증가 속도 둔화'와 '자구 대책 달성률'을 헤드라인으로 추출."),
+            ("흑자 전환 시 성과급 비판", "연료비 하락 등 외부 요인을 겸허히 인정하고, 흑자분을 부채 상환에 우선 투입함을 명시."),
+            ("비상경영 실효성 논란", "부동산 매각·조직 슬림화 자구 노력 이행률 100% 수치로 제시."),
+        ],
+        "action": "부채 증가 속도 둔화·자구 이행률 수치를 헤드라인으로 배치. 흑자분 부채 상환 우선 투입 계획 명시 공개.",
+        "steps": [
+            "부채 감축 로드맵·자구 이행률 정량 보도자료 즉시 배포",
+            "부동산 매각·조직 효율화 구체 사례 스토리화",
+            "경제지 전담 관계 강화 및 정기 백브리핑 개최",
+        ],
+        "msg": "부채의 늪을 건너는 유일한 길은 뼈를 깎는 자구 노력과 요금 정상화뿐입니다.",
+    },
+    "전력망·설비": {
+        "bg": "송전망 건설 지연은 반도체·산단 공급 차질로 이어지며 국익 이슈로 확산. 지역 반발과 지자체 인허가 거부가 복합 리스크.",
+        "sub_issues": [
+            ("반도체 산단 공급 차질", "전력망을 '에너지 고속도로'로 브랜딩, 국익 차원 시급성 호소. 전력망 특별법 필요성 강조."),
+            ("지역 주민 송전탑 반대", "'보상' 위주에서 '지역 상생·공익 가치' 중심으로 전환. 주민 참여형 신재생 사업 모델 제시."),
+            ("지자체 인허가 거부", "해당 지역 전력 자립도·산업 유치 저해 데이터를 정량 분석해 지역 언론 배포."),
+            ("노후 설비 대규모 정전", "사고 원인 투명 공개, 설비 현대화 투자 예산 부족(재무 위기 연계) 솔직 설명."),
+            ("그리드락(계통 접속 대기) 심화", "계통 여유 지도 공개, FACTS 등 기술적 해소 노력 홍보."),
+        ],
+        "action": "전력망을 '경제 동맥' 프레임으로 격상. 계통 여유 지도 공개 및 특별법 제정 필요성 공론화.",
+        "steps": [
+            "전력망 투자 로드맵·진행률 수치 중심 보도자료 배포",
+            "계통 여유 지도 공개 및 접속 대기 해소 기술 홍보",
+            "전력망 특별법 제정 필요성 의회·언론 동시 공론화",
+        ],
+        "msg": "멈춰 선 송전망은 대한민국 경제의 동맥경화입니다.",
+    },
+    "안전·사고": {
+        "bg": "현장 사고는 사회적 충격이 크고 협력업체 차별·대형 재난 연루 의혹으로 확산되는 전형적 패턴.",
+        "sub_issues": [
+            ("현장 감전·추락 사고", "CEO 즉시 현장 방문. 48시간 내 재발 방지책 공식 발표. 감성적 사과와 이성적 대책 병행."),
+            ("협력업체 차별 처우 논란", "'상생 협력 생태계' 강화 방안·협력사 안전 지원 예산 집행 현황 공개."),
+            ("산불 등 대형 재난 원인 의혹", "정밀 조사 전 '책임 회피 금지' 기조 유지. 드론 순시 등 산불 예방 투자 실적 강조."),
+            ("취약계층 에너지 사각지대", "수혜자 미발굴 전수조사 및 '찾아가는 서비스' 실적 홍보."),
+        ],
+        "action": "CEO 즉시 현장 방문, 48시간 내 재발 방지책 공식 발표. 협력사 안전 지원 예산 공개.",
+        "steps": [
+            "CEO 현장 방문·48시간 내 재발 방지책 공식 발표",
+            "협력사 안전 지원 예산·이행 현황 정량 공개",
+            "드론 순시·산불 예방 투자 실적 적극 홍보",
+        ],
+        "msg": "안전은 효율보다 소중합니다. 사람이 먼저인 현장을 만들겠습니다.",
+    },
+    "노사관계": {
+        "bg": "파업 결의는 공공서비스 안정성 우려로 즉각 확산. MZ세대 이탈·희망퇴직 반발이 내부 리스크로 중첩.",
+        "sub_issues": [
+            ("파업 결의·단체 행동", "파업 시에도 전력 공급 차질 없음을 최우선 홍보. 노사 대화 채널 상시 브리핑."),
+            ("MZ세대 이탈·사기 저하", "CEO 현장 소통 설명회·유연 조직 문화 개선 사례 카드뉴스 제작."),
+            ("희망퇴직·인력 감축 반발", "경영 위기 불가피성 설명과 전직 지원 프로그램 보완책 동시 제시."),
+            ("채용 비리·불공정 평가 의혹", "AI 채용 시스템·외부 참관인 제도 등 투명성 강화 조치 홍보."),
+            ("정치적 외풍 인사 논란", "전문성 중심 인사 원칙 재확인·성과 중심 보직 임명 사례 홍보."),
+        ],
+        "action": "전력 공급 차질 없음 즉각 선언. 노사 대화 채널 가동 현황 실시간 브리핑으로 루머 선제 차단.",
+        "steps": [
+            "전력 공급 안정 유지 공식 선언 및 실시간 브리핑",
+            "노사 협상 진행 현황 정기 공개(루머 차단)",
+            "MZ세대 조직 문화 개선 카드뉴스 SNS 배포",
+        ],
+        "msg": "어떤 순간에도 대한민국 전력의 심장은 멈추지 않습니다.",
+    },
+    "탄소중립·에너지전환": {
+        "bg": "신재생 전환 지연과 계통 불안정 비판이 이행 속도 논란으로 확산. RE100·OECD 비교가 국제 압박 채널로 작동.",
+        "sub_issues": [
+            ("신재생 전환 지연·RE100 하락", "ESS·계통 안정화 투자 로드맵 및 '에너지 휴게소' 개념 홍보."),
+            ("계통 불안정 비판", "변동성 큰 재생에너지를 수용하는 기술(FACTS·ESS) 구체 실적 제시."),
+            ("R&D 예산 삭감 우려", "5대 핵심 기술(HVDC·신재생 등) 위주 투자 성과 발표."),
+        ],
+        "action": "온실가스 감축 실적 정량 공개. ESS·FACTS 등 계통 안정화 기술 투자 로드맵 시각화.",
+        "steps": [
+            "온실가스 감축 실적·재생에너지 발전량 수치 공개",
+            "ESS·FACTS 등 계통 안정화 기술 투자 로드맵 배포",
+            "국제 협약 대비 성과 비교 자료 정기 제공",
+        ],
+        "msg": "변동성 큰 재생에너지를 안정적으로 수용하는 것이 기술의 핵심입니다.",
+    },
+    "원전·수출": {
+        "bg": "수출 협상 지연 보도는 국가 신인도와 직결. 저가 수주 덤핑 논란·기술 유출 우려가 복합 리스크로 작동.",
+        "sub_issues": [
+            ("해외 수출 협상 지연", "원전 수출은 '장기전'임을 강조. 바라카 원전 성공 운영 사례를 레퍼런스로 지속 노출."),
+            ("저가 수주 덤핑 논란", "Team Korea 압도적 시공 역량과 경제성 데이터로 정면 반박."),
+            ("기술 유출·안전 우려", "국제 인증 현황·안전 기준 구체 자료 즉시 공개."),
+        ],
+        "action": "바라카 On-Time·On-Budget 성공 사례 집중 레퍼런스. 계약·협상 현황 정기 업데이트로 불확실성 해소.",
+        "steps": [
+            "바라카 원전 성공 사례·국제 인증 자료 지속 노출",
+            "수출 협상 진행 상황 정기 업데이트 공개",
+            "Team Korea 역량·경제성 비교 팩트시트 배포",
+        ],
+        "msg": "K-원전의 신뢰는 시간이 지날수록 더욱 단단해집니다.",
+    },
+    "공기업·거버넌스": {
+        "bg": "횡령·금품 수수·낙하산 인사·감사원 지적이 복합 발화. 민영화·분할 루머까지 가세하면 신뢰 훼손이 가속.",
+        "sub_issues": [
+            ("횡령·금품 수수", "'원스트라이크 아웃제' 적용 공표. 전사 윤리 경영 서약 캠페인 전개."),
+            ("낙하산 인사 논란", "전문성 중심 인사 원칙 재확인·성과 중심 보직 임명 사례 홍보."),
+            ("감사원 지적 보도", "지적 사항 겸허 수용·개선 조치 완료 및 진행 사항 즉시 공개."),
+            ("민영화·분할 루머", "공식 입장문으로 '에너지 안보·공익성' 최우선 가치 재확인."),
+            ("CEO 발언 왜곡 보도", "발언 전문(Full Script) 신속 공개·오보 대응팀 정정 보도 요청."),
+        ],
+        "action": "'원스트라이크 아웃제' 공표 및 감사 결과 즉시 자진 공개. 윤리 경영 서약 캠페인 전사 전개.",
+        "steps": [
+            "원스트라이크 아웃제·윤리 경영 서약 전사 공표",
+            "감사 지적 개선 조치 완료 현황 즉시 공개",
+            "민영화 루머 공식 입장문·공익성 가치 재확인 배포",
+        ],
+        "msg": "부정부패와는 결코 타협하지 않는 청렴 한전을 만들겠습니다.",
+    },
+    "AI·디지털혁신": {
+        "bg": "투자 대비 성과 불명확 시 예산 낭비 비판. AI 일자리 축소 우려가 내부·외부 동시 저항으로 전이.",
+        "sub_issues": [
+            ("투자 대비 성과 부족", "AI 도입 전후 효율 지표 수치 비교 Before-After 보도자료 배포."),
+            ("AI 일자리 축소 우려", "AI는 '대체'가 아닌 '지원' 도구. 고위험 현장 업무 AI 대체로 안전 강화 사례 홍보."),
+            ("보안·개인정보 리스크", "보안·개인정보 보호 조치 별도 세부 홍보."),
+        ],
+        "action": "AI 도입 Before-After 효율 지표 배포. 'AI는 직원 지원 도구' 메시지로 일자리 불안 선제 해소.",
+        "steps": [
+            "AI 도입 전후 효율 지표 수치 비교 보도자료 배포",
+            "고위험 현장 AI 대체 안전 강화 사례 스토리화",
+            "보안·개인정보 보호 조치 별도 홍보",
+        ],
+        "msg": "AI는 직원을 대신하는 것이 아니라, 직원의 안전과 전문성을 돕습니다.",
+    },
+    "고객·서비스": {
+        "bg": "AMI 오류·불투명 요금 청구·고객센터 연결 지연이 SNS 확산의 주요 트리거. 소외계층 접근성 문제가 공분으로 연결.",
+        "sub_issues": [
+            ("AMI 오류·요금 청구 불만", "선제적 오류 보상 체계 구축·맞춤형 서비스 혁신 사례 홍보."),
+            ("고객센터 연결 지연", "AI 챗봇 24/7 대응 체계 구축 사실 홍보."),
+            ("취약계층 에너지 사각지대", "'찾아가는 서비스' 실적·수혜자 수 수치화 홍보."),
+        ],
+        "action": "민원 처리 속도·만족도 지표 공개. '찾아가는 에너지 복지 서비스' 실적 수치화·배포.",
+        "steps": [
+            "민원 처리 속도·만족도 지표 공개",
+            "AI 챗봇 24/7 대응 체계 구축 사실 홍보",
+            "취약계층 수혜자 수·전수조사 결과 수치화",
+        ],
+        "msg": "단 한 가구의 불도 꺼지지 않도록 꼼꼼히 살피겠습니다.",
+    },
+    "정책·규제": {
+        "bg": "경찰 조사·소송은 기관 이미지에 즉각 타격. 정부 정책과의 엇박자 논란은 공기업 존재 가치를 흔드는 이슈로 확산.",
+        "sub_issues": [
+            ("경찰 조사·소송 리스크", "법무팀 공식 입장 즉시 발표. '적극 협조·투명 소명' 메시지 여론 선점."),
+            ("정부 정책과의 엇박자", "정책 실행 기관으로서 충실한 이행 의지 강조. 기업적 효율 대안 조율 중임 시사."),
+            ("일방적 정책 추진 비판", "이해관계자 사전 소통 채널 가동 현황 공개."),
+        ],
+        "action": "법무팀 공식 입장 48시간 내 즉각 발표. '적극 협조·투명 소명' 메시지로 법적 대응보다 여론 우선 선점.",
+        "steps": [
+            "법무팀 공식 입장 48시간 내 발표",
+            "사실 관계 오보 정정 요청 즉각 집행",
+            "조사 협조 의지·투명성 강조 메시지 선점",
+        ],
+        "msg": "국가 정책을 가장 효율적으로 실현하는 든든한 파트너가 되겠습니다.",
+    },
 }
-DEFAULT_INSIGHT = {"bg":"커뮤니케이션 공백이 부정 보도의 가장 큰 원인.","action":"해당 이슈 공식 입장 48시간 내 발표 및 담당 부서 창구 일원화","steps":["해당 이슈 공식 입장 48시간 내 발표","담당 부서 창구 일원화","미디어 대응 매뉴얼 사전 준비"],"msg":"말하지 않으면 언론이 대신 말한다. 먼저, 빠르게, 구체적으로."}
+
+# ── 위기관리 언론홍보 실행 전략 20선 (문서5 기반) ─────────────────────────
+EXECUTION_STRATEGY = {
+    "Ⅰ. 커뮤니케이션 거버넌스": [
+        ("골든아워(1시간) 대응 워룸 상시화",
+         "위기 감지 즉시 홍보처 중심 의사결정 협의체 가동 → 1시간 내 공식 입장(Statement) 발표"),
+        ("팩트체크 기반 '원스톱' 승인 프로세스",
+         "실무 부서↔홍보처 직통 라인으로 팩트 확인·메시지 승인 단계 최소화, 대응 속도 극대화"),
+        ("위기 단계별 다크 사이트(Dark Site) 운영",
+         "대형 사고 발생 시 즉각 전환 가능한 위기 전용 홈페이지 사전 설계, 정확한 정보 집중 제공"),
+        ("24시간 실시간 여론 모니터링 고도화",
+         "AI 기반 뉴스·SNS 키워드 분석으로 위기 징후 선제 포착 및 조기 경보 체계 운영"),
+    ],
+    "Ⅱ. 전략적 미디어 릴레이션십": [
+        ("핵심 현안 '정기 백브리핑' 정례화",
+         "요금 현실화·전력망 확충 등 복잡 현안을 출입기자단 대상 심층 설명회로 오보 가능성 차단"),
+        ("미디어 파트너십 기반 아웃리치 강화",
+         "주요 매체 논설위원·데스크와 정기 간담회 → 에너지 보국 가치 공유"),
+        ("가짜뉴스·오보 대응 '팩트 허브' 운영",
+         "사실 다른 보도에 증거 데이터와 함께 즉각 반박 자료 게시, 언론 정정 요청 강화"),
+        ("미래 기술(AX/Grid) 미디어 데이 개최",
+         "'에너지고속도로', 'AI 혁신' 시연·체험 기회 제공으로 긍정 보도 확산 유도"),
+    ],
+    "Ⅲ. 이해관계자 및 사회적 책임": [
+        ("전력망 건설 지역 상생 소통 라운드테이블",
+         "송전망 건설 갈등 지역 주민과 정기 소통 채널 구축, 주민 의견 건설 계획에 선제 반영"),
+        ("에너지 취약계층 지원 성과 시각화",
+         "복지 할인·에너지 바우처 지원 실적을 국민 체감형 인포그래픽으로 제작·배포"),
+        ("국민 참여형 '에너지 안보' 캠페인",
+         "요금 정상화가 한전 수익이 아닌 '국가 에너지 안보'를 위한 투자임을 알리는 대국민 공감 캠페인"),
+        ("지역사회 맞춤형 '에너지보국' 스토리텔링",
+         "단순 기부를 넘어 지역 전력 설비 점검·주거 환경 개선 등 업(業) 특성 살린 CSR 홍보"),
+    ],
+    "Ⅳ. 디지털 및 뉴미디어 소통": [
+        ("정책 전문 '숏폼' 콘텐츠 제작",
+         "어려운 에너지 정책·요금 체계를 1분 내외 영상으로 제작, MZ세대 소통 접점 확대"),
+        ("AI 챗봇 기반 24/7 위기대응 FAQ",
+         "위기 시 대량 고객 문의에 AI 활용, 정확하고 일관된 정보 실시간 제공"),
+        ("소셜 리스닝 기반 맞춤형 메시지 송출",
+         "온라인 논란 키워드 분석 → 직접적 해답을 주는 콘텐츠 배포"),
+        ("사내 인플루언서(앰배서더) 육성·활용",
+         "현장 직원 목소리로 한전의 노고·진정성 전달하는 친근한 브랜딩 콘텐츠 강화"),
+    ],
+    "Ⅴ. 조직 내부 및 리더십 소통": [
+        ("CEO 주재 전사 위기관리 타운홀 미팅",
+         "위기 상황 사장이 직접 직원에게 경영 현황 공유, 주인의식 고취 소통의 장 마련"),
+        ("위기 대응 매뉴얼 현장 전파 및 교육",
+         "홍보처뿐만 아니라 전 사업소 실무자 정기 모의 훈련 실시"),
+        ("글로벌 에너지 솔루션 기업 이미지 제고",
+         "원전 수출·해외 사업 성과 집중 홍보 → 내부 구성원 자부심 고취 및 대외 신뢰도 향상"),
+        ("사후 평가 시스템(AAR) 도입",
+         "위기 종료 후 대응 과정 정밀 분석 백서 발간, 다음 위기 대응 자산으로 축적"),
+    ],
+}
+
+
+DEFAULT_INSIGHT = {
+    "bg": "커뮤니케이션 공백이 부정 보도의 가장 큰 원인. 침묵은 언론이 대신 채운다.",
+    "sub_issues": [
+        ("신속 대응 체계 부재", "위기 감지 즉시 홍보처 중심 의사결정 협의체 가동. 1시간 내 공식 입장 발표 체계 구축."),
+        ("공식 채널 속도 미흡", "팩트체크 기반 원스톱 승인 프로세스로 대응 속도 극대화."),
+    ],
+    "action": "해당 이슈 공식 입장 48시간 내 발표 및 담당 부서 창구 일원화.",
+    "steps": [
+        "해당 이슈 공식 입장 48시간 내 발표",
+        "담당 부서 창구 일원화·원스톱 승인 프로세스 가동",
+        "미디어 대응 매뉴얼 즉시 실행",
+    ],
+    "msg": "말하지 않으면 언론이 대신 말한다. 먼저, 빠르게, 구체적으로.",
+}
+
+# ── 위기관리 언론홍보 실행전략 20선 (문서5 기반) ──────────────────
+CRISIS_EXECUTION_STRATEGY = [
+    {
+        "group": "Ⅰ. 커뮤니케이션 거버넌스",
+        "color": "#B71C1C",
+        "icon": "🏛️",
+        "items": [
+            ("골든아워(1시간) 워룸 상시화", "위기 감지 즉시 홍보처 중심 의사결정 협의체 가동. 1시간 내 공식 Statement 발표 체계 구축."),
+            ("팩트체크 기반 원스톱 승인", "실무 부서↔홍보처 직통 라인으로 팩트 확인·메시지 승인 단계 최소화. 대응 속도 극대화."),
+            ("위기 단계별 다크 사이트 운영", "대형 사고 발생 시 즉각 전환 가능한 위기 대응 전용 홈페이지 미리 설계."),
+            ("24시간 AI 여론 모니터링", "AI 기반 뉴스·SNS 키워드 분석으로 위기 징후 선제 포착. 조기 경보 체계 운영."),
+        ],
+    },
+    {
+        "group": "Ⅱ. 전략적 미디어 릴레이션십",
+        "color": "#1565C0",
+        "icon": "📡",
+        "items": [
+            ("핵심 현안 정기 백브리핑", "요금 현실화·전력망 확충 등 복잡 현안 출입기자단 심층 설명회. 오보 가능성 선제 차단."),
+            ("논설위원·데스크 정기 간담회", "주요 매체 데스크와 정기 간담회로 한전 경영 철학·'에너지 보국' 가치 공유."),
+            ("팩트 허브 운영·오보 즉각 반박", "사실과 다른 보도에 증거 데이터와 함께 즉각 반박 자료 게시. 언론 정정 요청 강화."),
+            ("AX·Grid 미디어 데이 개최", "에너지고속도로·AI 혁신을 시연·체험하는 행사로 긍정 보도 확산 유도."),
+        ],
+    },
+    {
+        "group": "Ⅲ. 이해관계자 및 사회적 책임",
+        "color": "#2E7D32",
+        "icon": "🤝",
+        "items": [
+            ("전력망 갈등 지역 소통 라운드테이블", "송전망 건설 갈등 지역 주민들과 정기 소통 채널 구축. 주민 의견 건설 계획에 선제 반영."),
+            ("취약계층 지원 성과 인포그래픽 배포", "복지 할인·에너지 바우처 지원 실적을 국민이 체감하는 인포그래픽으로 제작 배포."),
+            ("'에너지 안보' 대국민 공감 캠페인", "요금 정상화가 한전 수익이 아닌 국가 에너지 안보를 위한 투자임을 알리는 캠페인 전개."),
+            ("지역사회 맞춤형 에너지보국 스토리텔링", "단순 기부를 넘어 지역 전력 설비 점검·주거 환경 개선 등 업 특성 살린 CSR 홍보."),
+        ],
+    },
+    {
+        "group": "Ⅳ. 디지털 및 뉴미디어 소통",
+        "color": "#6A1B9A",
+        "icon": "📱",
+        "items": [
+            ("정책 전문 숏폼 콘텐츠 제작", "어려운 에너지 정책·요금 체계를 1분 영상으로 제작. MZ세대 소통 접점 확대."),
+            ("AI 챗봇 24/7 위기대응 FAQ", "위기 시 대량 고객 문의에 AI를 활용한 정확하고 일관된 정보 실시간 제공."),
+            ("소셜 리스닝 기반 맞춤형 메시지 송출", "온라인 논란 키워드 분석 후 직접적 해답을 주는 콘텐츠 배포."),
+            ("사내 인플루언서(앰배서더) 육성", "현장 직원의 목소리로 한전 노고와 진정성을 전달하는 친근한 브랜딩 콘텐츠 강화."),
+        ],
+    },
+    {
+        "group": "Ⅴ. 조직 내부 및 리더십 소통",
+        "color": "#E65100",
+        "icon": "🏢",
+        "items": [
+            ("CEO 전사 위기관리 타운홀 미팅", "위기 상황에서 사장이 직접 직원들에게 경영 현황 공유. 주인의식 고취 소통의 장 마련."),
+            ("위기 대응 매뉴얼 현장 전파 교육", "홍보처 외 전 사업소 실무자가 위기 시 행동 요령 숙지. 정기 모의 훈련 실시."),
+            ("글로벌 에너지 솔루션 기업 이미지 제고", "원전 수출·해외 사업 성과 집중 홍보. 내부 구성원 자부심 고취 및 대외 신뢰도 향상."),
+            ("사후 평가 시스템(AAR) 도입", "위기 종료 후 대응 과정 정밀 분석·백서 발간. 다음 위기 대응 자산으로 축적."),
+        ],
+    },
+]
 
 def gen_paired_insights(criticisms):
     result = []
@@ -546,23 +839,121 @@ def divider(n, count_html=""):
     st.markdown(f"<div style='font-size:15px;font-weight:800;color:#003366;letter-spacing:.5px;border-bottom:2px solid #003366;padding-bottom:6px;margin:20px 0 10px;font-family:{FONT_KR};'>{n}{count_html}</div>", unsafe_allow_html=True)
 
 # ── 위기관리 권고 박스 ──────────────────────────────────
-def show_crisis_recommendation(pr_s, pr_l, label):
-    if pr_s >= 80:
-        grade_txt = "A등급(심각)"; bg = "#FFEBEE"; border = "#C62828"; icon = "🚨"
-        action = "외부 전문가 공조 체제 즉시 구축. 그룹 전체 위기관리 프로토콜 가동 필요."
-        criteria = "중앙부처 문의·조사 개시 / 중앙지·방송 집중 보도 / 전국 규모 단체 항의 가능성"
-    elif pr_s >= 70:
-        grade_txt = "B등급(경계)"; bg = "#FFF3E0"; border = "#E65100"; icon = "⚠️"
-        action = "사업소 단위 위기관리 가동. 지방 언론 및 지역 단체 대응 강화 즉시 실행."
-        criteria = "시·도 관공서 문의 / 지방 신문·지역방송 보도 / 지역 단체 항의 가능성"
-    else:
+def show_crisis_recommendation(pr_s, pr_l, label, cd=None):
+    """PR 리스크 70점 이상 시 강력 권고 박스 + 실행전략 상위 3선 표출"""
+    if pr_s < 70:
         return
-    st.markdown(f"""<div style='background:{bg};border:2px solid {border};border-radius:6px;padding:12px 16px;margin-bottom:12px;font-family:{FONT_KR};'>
-<div style='font-size:14px;font-weight:800;color:{border};margin-bottom:6px;'>{icon} PR 리스크 {pr_s}점 — {grade_txt} 위기관리 절차 즉시 시행 권고</div>
-<div style='font-size:12px;color:#333;margin-bottom:4px;'><b>판단 기준:</b> {criteria}</div>
-<div style='font-size:12px;color:{border};font-weight:700;'><b>조치사항:</b> {action}</div>
-<div style='font-size:11px;color:#888;margin-top:5px;'>※ 위기관리 메뉴얼 참조: 확산 범위 재확인 → 등급별 대응팀 소집 → 48시간 내 공식 입장 발표</div>
+
+    if pr_s >= 85:
+        tier = "A등급 (긴급·전사 위기)"
+        bg = "#FFEBEE"; border = "#B71C1C"; icon = "🚨"
+        badge_color = "#B71C1C"
+        trigger = "중앙부처 문의·조사 개시 / 중앙지·방송 집중 보도 / 전국 규모 단체 항의 가능성"
+        immediate = [
+            "① 골든아워(1시간) 내 홍보처 War Room 가동, 공식 Statement 즉각 발표",
+            "② CEO 직접 담화 또는 현장 방문으로 책임 있는 리더십 메시지 발신",
+            "③ 다크 사이트(Dark Site) 즉시 전환, 단일 창구로 정보 집중 제공",
+            "④ 외부 전문가 공조 체제 구축 및 그룹 전체 위기관리 프로토콜 가동",
+        ]
+    elif pr_s >= 75:
+        tier = "B등급 (경계·집중 대응)"
+        bg = "#FFF3E0"; border = "#E65100"; icon = "⚠️"
+        badge_color = "#E65100"
+        trigger = "시·도 관공서 문의 / 지방 신문·지역방송 집중 보도 / 지역 단체 항의 가능성"
+        immediate = [
+            "① 48시간 내 공식 입장 발표 및 담당 부서 창구 일원화",
+            "② 출입기자단 대상 백브리핑 즉시 개최, 오보 확산 차단",
+            "③ 지역 언론 대응 강화 및 사업소 단위 위기관리 가동",
+            "④ 소셜 리스닝 강화, 키워드 확산 경로 실시간 모니터링",
+        ]
+    else:  # 70~74
+        tier = "C등급 (주의·예방 관리)"
+        bg = "#FFFDE7"; border = "#F9A825"; icon = "⚡"
+        badge_color = "#F57F17"
+        trigger = "온라인 키워드 확산 / 전문지·업계 언론 집중 보도 / 이해관계자 문의 증가"
+        immediate = [
+            "① 주요 이슈 공식 입장 선제 정리 및 FAQ 문서 사전 준비",
+            "② 정기 백브리핑 일정 앞당겨 관련 기자 선제 설명",
+            "③ 팩트 허브(FAQ 페이지) 업데이트로 오보 예방 기반 구축",
+            "④ 내부 실무진 위기 대응 매뉴얼 공유 및 모의 훈련 실시",
+        ]
+
+    # 해당 이슈의 상위 실행전략 3선 자동 매핑
+    top_neg_cat = cd.get('top_neg_cat', '') if cd else ''
+    strategy_hints = []
+    if top_neg_cat in ("전기요금", "재무·경영"):
+        strategy_hints = [
+            ("Ⅱ-① 정기 백브리핑 정례화", "요금 현실화 복잡 현안을 심층 설명회로 오보 가능성 차단"),
+            ("Ⅲ-③ 에너지 안보 캠페인", "요금 정상화가 국민 이익임을 알리는 대국민 공감 캠페인 즉시 기획"),
+            ("Ⅳ-① 숏폼 콘텐츠 제작", "1분 내외 요금 체계 해설 영상으로 MZ세대 공감 확보"),
+        ]
+    elif top_neg_cat in ("전력망·설비",):
+        strategy_hints = [
+            ("Ⅰ-④ 실시간 여론 모니터링", "전력망 이슈 키워드 확산 경로 AI 기반 조기 포착"),
+            ("Ⅱ-④ 미디어 데이 개최", "'에너지고속도로' 현장 시연으로 긍정 프레임 전환"),
+            ("Ⅲ-① 상생 소통 라운드테이블", "건설 갈등 지역 주민과 정기 소통 채널 즉시 구축"),
+        ]
+    elif top_neg_cat in ("안전·사고",):
+        strategy_hints = [
+            ("Ⅰ-① 골든아워 War Room", "사고 감지 1시간 내 공식 입장 발표 체계 가동"),
+            ("Ⅱ-③ 팩트 허브 운영", "사고 원인·재발 방지책 데이터 즉각 게시, 루머 차단"),
+            ("Ⅴ-① CEO 타운홀 미팅", "CEO 직접 현장 방문·전 직원 대상 안전 의지 선언"),
+        ]
+    elif top_neg_cat in ("노사관계",):
+        strategy_hints = [
+            ("Ⅰ-① 골든아워 War Room", "파업 선언 즉시 전력 공급 안정 유지 Statement 발표"),
+            ("Ⅴ-① CEO 타운홀 미팅", "CEO가 직접 직원에게 경영 현황·대화 의지 공유"),
+            ("Ⅳ-② AI 챗봇 FAQ", "파업 관련 국민 문의에 24/7 정확한 정보 즉각 제공"),
+        ]
+    elif top_neg_cat in ("공기업·거버넌스",):
+        strategy_hints = [
+            ("Ⅰ-② 원스톱 승인 프로세스", "사건 감지 즉시 사실 확인·공식 입장 최단 시간 발표"),
+            ("Ⅱ-③ 팩트 허브 운영", "의혹 제기 보도에 증거 데이터 즉각 반박 자료 게시"),
+            ("Ⅴ-④ AAR 시스템 도입", "사건 처리 후 전 과정 정밀 분석, 재발 방지 백서 발간"),
+        ]
+    else:
+        strategy_hints = [
+            ("Ⅰ-① 골든아워 War Room", "위기 감지 1시간 내 공식 Statement 발표 체계 즉시 가동"),
+            ("Ⅱ-① 정기 백브리핑 정례화", "현안 관련 출입기자단 심층 설명회로 오보 확산 차단"),
+            ("Ⅳ-③ 소셜 리스닝 맞춤 대응", "온라인 논란 키워드 분석 후 직접 해답 콘텐츠 배포"),
+        ]
+
+    immediate_html = "".join([
+        f"<div style='font-size:11px;color:#333;padding:4px 0;border-bottom:1px dashed #f0f0f0;'>{step}</div>"
+        for step in immediate
+    ])
+    strategy_html = "".join([
+        f"<div style='margin-bottom:6px;'>"
+        f"<span style='font-size:11px;font-weight:700;color:{badge_color};'>{s[0]}</span>"
+        f"<div style='font-size:10px;color:#666;margin-top:2px;'>{s[1]}</div>"
+        f"</div>"
+        for s in strategy_hints
+    ])
+
+    st.markdown(f"""<div style='background:{bg};border:2px solid {border};border-radius:8px;padding:16px 18px;margin-bottom:14px;font-family:{FONT_KR};'>
+  <div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;'>
+    <div>
+      <span style='font-size:16px;font-weight:900;color:{border};'>{icon} PR 리스크 {pr_s}점</span>
+      <span style='display:inline-block;background:{border};color:white;font-size:11px;font-weight:800;padding:2px 10px;border-radius:12px;margin-left:8px;'>{tier}</span>
+    </div>
+    <div style='font-size:10px;color:#999;text-align:right;'>위기관리 절차 즉시 시행 권고</div>
+  </div>
+  <div style='font-size:11px;color:#555;margin-bottom:10px;'><b>판단 기준:</b> {trigger}</div>
+  <div style='display:flex;gap:12px;flex-wrap:wrap;'>
+    <div style='flex:3;min-width:280px;background:rgba(255,255,255,0.7);border-radius:6px;padding:10px 14px;'>
+      <div style='font-size:12px;font-weight:800;color:{border};margin-bottom:6px;'>🔥 즉각 실행 4대 조치</div>
+      {immediate_html}
+    </div>
+    <div style='flex:2;min-width:200px;background:rgba(255,255,255,0.7);border-radius:6px;padding:10px 14px;'>
+      <div style='font-size:12px;font-weight:800;color:#003366;margin-bottom:8px;'>📋 이슈별 실행전략 TOP 3</div>
+      {strategy_html}
+    </div>
+  </div>
+  <div style='font-size:10px;color:#aaa;margin-top:8px;border-top:1px solid #e0e0e0;padding-top:6px;'>
+    ※ 세부 실행전략 20선 전문은 홍보처 위기관리 매뉴얼(Ⅰ~Ⅴ) 참조
+  </div>
 </div>""", unsafe_allow_html=True)
+
 
 # ══ 보고서 렌더링 ══════════════════════════════════════
 def render_report(cd):
@@ -594,10 +985,74 @@ def render_report(cd):
         st.download_button("📄 보고서 워드", data=wb, file_name=f"KEPCO_{label}_{datetime.now().strftime('%Y%m%d')}.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True, key=f"wd_{label}")
 
     # 위기관리 권고 (조건부)
-    show_crisis_recommendation(pr_s, pr_l, label)
+    show_crisis_recommendation(pr_s, pr_l, label, cd)
 
+    # ═══ 조사 개요 블록 ═══
+    neg_media_list = df[df['감성']=='부정']['매체'].value_counts().head(4)
+    pos_media_list = df[df['감성']=='긍정']['매체'].value_counts().head(3)
+    neu_media_list = df[df['감성']=='중립']['매체'].value_counts().head(3)
 
-    # ═══ 01. KPI + 결론 ═══
+    def media_row(mv, color):
+        items = [f"<span style='display:inline-block;background:{color}15;border:1px solid {color}44;border-radius:12px;padding:2px 8px;font-size:10px;color:{color};margin:2px 2px;font-weight:600;'>{m}({n}건)</span>" for m,n in mv.items()]
+        return "".join(items) if items else "<span style='font-size:10px;color:#aaa;'>해당없음</span>"
+
+    neg_media_html = media_row(neg_media_list, "#C62828")
+    pos_media_html = media_row(pos_media_list, "#1565C0")
+    neu_media_html = media_row(neu_media_list, "#555555")
+
+    # 부정 주요 이슈 TOP3
+    neg_cats = df[df['감성']=='부정']['카테고리'].value_counts().head(3)
+    issue_html = "".join([f"<li style='font-size:11px;color:#333;margin-bottom:3px;'><b>{cat}</b> ({n}건)</li>" for cat,n in neg_cats.items()])
+    pos_cats = df[df['감성']=='긍정']['카테고리'].value_counts().head(3)
+    pos_issue_html = "".join([f"<li style='font-size:11px;color:#333;margin-bottom:3px;'><b>{cat}</b> ({n}건)</li>" for cat,n in pos_cats.items()])
+
+    tone_overall = "부정 우세" if neg_n > pos_n*1.5 else "긍정 우세" if pos_n > neg_n*1.5 else "균형"
+    tone_color   = "#C62828" if neg_n > pos_n*1.5 else "#1565C0" if pos_n > neg_n*1.5 else "#555"
+
+    st.markdown(f"""<div style='background:white;border:1px solid #ddd;border-radius:8px;padding:16px 20px;margin-bottom:12px;font-family:{FONT_KR};'>
+  <div style='font-size:16px;font-weight:800;color:#003366;margin-bottom:12px;border-bottom:2px solid #003366;padding-bottom:6px;'>
+    📋 {label} 언론보도 분석 — 조사 개요
+  </div>
+  <div style='display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;'>
+    <div style='flex:1;min-width:140px;background:#F4F6F9;border-radius:6px;padding:10px 14px;'>
+      <div style='font-size:9px;font-weight:700;color:#888;letter-spacing:.8px;margin-bottom:4px;'>조사 기간</div>
+      <div style='font-size:12px;font-weight:700;color:#003366;'>{period_str}</div>
+    </div>
+    <div style='flex:1;min-width:140px;background:#F4F6F9;border-radius:6px;padding:10px 14px;'>
+      <div style='font-size:9px;font-weight:700;color:#888;letter-spacing:.8px;margin-bottom:4px;'>분석 방법</div>
+      <div style='font-size:12px;font-weight:700;color:#003366;'>네이버 뉴스 API<br>키워드·감성 분석</div>
+    </div>
+    <div style='flex:1;min-width:140px;background:#F4F6F9;border-radius:6px;padding:10px 14px;'>
+      <div style='font-size:9px;font-weight:700;color:#888;letter-spacing:.8px;margin-bottom:4px;'>분석 범위</div>
+      <div style='font-size:12px;font-weight:700;color:#003366;'>논조 구분, 매체별 비중<br>키워드·이슈 우선순위</div>
+    </div>
+    <div style='flex:1;min-width:140px;background:#F4F6F9;border-radius:6px;padding:10px 14px;'>
+      <div style='font-size:9px;font-weight:700;color:#888;letter-spacing:.8px;margin-bottom:4px;'>총 수집 기사</div>
+      <div style='font-size:14px;font-weight:800;color:#003366;'>{total}건</div>
+      <div style='font-size:10px;color:{tone_color};font-weight:700;'>{tone_overall} 기조</div>
+    </div>
+  </div>
+  <div style='display:flex;gap:12px;flex-wrap:wrap;'>
+    <div style='flex:2;min-width:200px;'>
+      <div style='font-size:11px;font-weight:800;color:#C62828;margin-bottom:5px;'>🔴 부정 논조 주요 매체 ({neg_n}건 · {neg_rate:.0f}%)</div>
+      <div style='margin-bottom:8px;'>{neg_media_html}</div>
+      <div style='font-size:11px;font-weight:800;color:#1565C0;margin-bottom:5px;'>🔵 긍정 논조 주요 매체 ({pos_n}건 · {pos_rate:.0f}%)</div>
+      <div style='margin-bottom:8px;'>{pos_media_html}</div>
+      <div style='font-size:11px;font-weight:800;color:#555;margin-bottom:5px;'>⚫ 중립 논조 주요 매체 ({neu_n}건 · {neu_n/total*100:.0f}%)</div>
+      <div>{neu_media_html}</div>
+    </div>
+    <div style='flex:1;min-width:160px;'>
+      <div style='font-size:11px;font-weight:800;color:#C62828;margin-bottom:5px;'>주요 비판 이슈</div>
+      <ul style='margin:0;padding-left:14px;'>{issue_html}</ul>
+    </div>
+    <div style='flex:1;min-width:160px;'>
+      <div style='font-size:11px;font-weight:800;color:#1565C0;margin-bottom:5px;'>주요 긍정 이슈</div>
+      <ul style='margin:0;padding-left:14px;'>{pos_issue_html}</ul>
+    </div>
+  </div>
+</div>""", unsafe_allow_html=True)
+
+    # ═══ 00. KPI + 결론 ═══
     divider("01 · 요약 및 제언")
     k1,k2,k3,k4,k5,k6=st.columns(6)
     for col,val,lbl,color,sub in [
@@ -619,34 +1074,16 @@ def render_report(cd):
     with g2:
         paired0 = gen_paired_insights(criticisms)
         a0 = paired0[0]['db']['action'] if paired0 else "—"
-        # 논조 평가 문장
-        if neg_n > pos_n * 1.5:
-            tone_eval = f"부정 보도({neg_rate:.0f}%)가 긍정 보도({pos_rate:.0f}%)를 크게 상회하여 언론 환경이 전반적으로 부정적입니다."
-        elif pos_n > neg_n * 1.5:
-            tone_eval = f"긍정 보도({pos_rate:.0f}%)가 부정 보도({neg_rate:.0f}%)를 상회하여 비교적 균형 있는 언론 환경이 유지되고 있습니다."
-        else:
-            tone_eval = f"부정 보도 {neg_rate:.0f}%, 긍정 보도 {pos_rate:.0f}%로 비교적 균형 있는 언론 환경이 유지되고 있습니다."
-        top_neg_kw_str = neg_kws[0][0] if neg_kws else "—"
-        # 기타 제외 부정/긍정 상위 이슈 추출
-        neg_issue_list = [c for c in df[df["감성"]=="부정"]["카테고리"].value_counts().index if c != "기타"][:3]
-        pos_issue_list = [c for c in df[df["감성"]=="긍정"]["카테고리"].value_counts().index if c != "기타"][:2]
-        neg_issues_str = ", ".join(neg_issue_list) if neg_issue_list else top_neg_cat
-        pos_issues_str = ", ".join(pos_issue_list) if pos_issue_list else top_pos_cat
-        summary_text = (
-            f"{period_str} 네이버 기사 전체 {total}건을 전수 분석했습니다. "
-            f"기간 내 {tone_eval} "
-            f"'{top_neg_kw_str}' 키워드가 부정 보도의 핵심이며 "
-            f"언론 리스크는 {pr_s}점({pr_l})입니다. "
-            f"위기관리 차원에서 선제적 대응과 '{neg_issues_str}' 이슈에 대한 공식 입장 발표가 권고됩니다. "
-            f"반면 '{pos_issues_str}'와 관련한 보도는 긍정적 흐름을 보이고 있어 홍보 자원 집중이 권고됩니다."
-        )
-        st.markdown(f"""<div style='background:#F8F9FA;border-left:3px solid #003366;border-radius:0 4px 4px 0;padding:12px 16px;font-size:12.5px;line-height:2.0;font-family:{FONT_KR};color:#222;'>
-        {summary_text}
-        <br><span style='color:#C62828;font-weight:700;font-size:11px;'>▶ 즉각 대응: {a0}</span>
+        a1 = paired0[1]['db']['action'] if len(paired0)>1 else "—"
+        st.markdown(f"""<div style='background:#F8F9FA;border-left:3px solid #003366;border-radius:0 4px 4px 0;padding:10px 14px;font-size:12px;line-height:1.8;font-family:{FONT_KR};'>
+        <span style='color:#003366;font-weight:700;'>핵심 비판:</span> {top_neg_cat} &nbsp;|&nbsp; <span style='color:#003366;font-weight:700;'>부정 키워드:</span> {neg_kw_str}<br>
+        <span style='color:#003366;font-weight:700;'>부정 집중 매체:</span> {top_neg_m}<br>
+        <span style='color:#003366;font-weight:700;'>결론:</span> {insights_text[:120]}…<br>
+        <span style='color:#C62828;font-weight:700;'>즉각 대응:</span> {a0}
         </div>""", unsafe_allow_html=True)
 
     # ═══ 01. 워드클라우드 ═══
-    divider("01 · 키워드 워드클라우드")
+    divider("02 · 워드클라우드")
     wc1, wc2 = st.columns([3,1])
     with wc1:
         fig_wc = plot_wordcloud(df)
@@ -661,7 +1098,7 @@ def render_report(cd):
         </div>""", unsafe_allow_html=True)
 
     # ═══ 02. 언론노출 추이 및 논조 분석 ═══
-    divider("02 · 언론노출 추이 및 논조 분석")
+    divider("03 · 언론노출 추이 및 논조 분석")
     b1, b2 = st.columns([1, 2])
     with b1:
         st.plotly_chart(plot_donut(pos_n, neg_n, neu_n, total), use_container_width=True, config=cfg())
@@ -669,7 +1106,7 @@ def render_report(cd):
         st.plotly_chart(plot_buzz(df), use_container_width=True, config=cfg())
 
     # ═══ 03. 매체별 논조 ═══
-    divider("03 · 매체별 논조")
+    divider("04 · 매체별 논조")
     media_all = df["매체"].value_counts().head(12).index.tolist()
     media_sorted = sorted(media_all, key=lambda m: (
         -df[(df["매체"]==m)&(df["감성"]=="부정")].shape[0]/max(1,df[df["매체"]==m].shape[0]),
@@ -687,7 +1124,7 @@ def render_report(cd):
     <tr style='background:#003366;color:white;font-size:10px;'><th style='padding:5px 8px;text-align:left;'>매체</th><th style='padding:5px 8px;'>열독률</th><th style='padding:5px 8px;'>부정</th><th style='padding:5px 8px;'>긍정</th><th style='padding:5px 8px;text-align:left;'>부정비중</th></tr>{rows_m}</table>""", unsafe_allow_html=True)
 
     # ═══ 04. 논조별 키워드 + 클릭 추세 ═══
-    divider("04 · 논조별 키워드 노출량 — 키워드 클릭 시 추세 분석")
+    divider("05 · 논조별 키워드 TOP5 — 키워드 클릭 시 추세 분석")
 
     sel_kw_key = f"sel_kw_{label}"
     if sel_kw_key not in st.session_state:
@@ -755,7 +1192,7 @@ def render_report(cd):
             else: st.caption("해당 기간 데이터 없음")
 
     # ═══ 05. 매체×이슈 히트맵 ═══
-    divider("05 · 매체×이슈 부정 보도율 — 커서를 셀에 올리면 기사 확인")
+    divider("06 · 매체×이슈 부정 보도율 — 커서를 셀에 올리면 기사 확인")
     fig_hm = plot_heatmap_with_hover(df)
     if fig_hm:
         st.plotly_chart(fig_hm, use_container_width=True, config=cfg())
@@ -763,7 +1200,7 @@ def render_report(cd):
         st.caption("데이터 부족으로 히트맵 생성 불가")
 
     # ═══ 06. 비판 포인트 레이더 + As-Is/To-Be ═══
-    divider("06 · 비판 포인트 & 대응 전략 — 문제(As-Is) → 개선(To-Be)")
+    divider("07 · 비판 포인트 & 대응 전략 — 현황(As-Is) → 전략(To-Be)")
     paired = gen_paired_insights(criticisms)
 
     # 레이더차트: 카테고리별 부정 건수 기반 6각형
@@ -872,7 +1309,7 @@ def render_report(cd):
     neu_cnt = int(df['감성'].value_counts().get('중립',0))
     pos_cnt = int(df['감성'].value_counts().get('긍정',0))
     count_html = f" <span style='font-size:12px;font-weight:400;color:#888;'>🔴 부정 {neg_cnt} · 🟡 중립 {neu_cnt} · 🟢 긍정 {pos_cnt} · 총 {total}건</span>"
-    divider("07 · 기사 목록", count_html)
+    divider("08 · 기사 목록", count_html)
 
     fdf = df.copy()
     fdf['_rank'] = fdf['매체'].apply(get_media_rank)
@@ -947,7 +1384,9 @@ for k,v in [("history",[]),("analysis_cache",{}),("active_key",None)]:
     if k not in st.session_state: st.session_state[k]=v
 
 if not YF_OK: st.warning("📦 주가: pip install yfinance 실행 필요", icon="⚠️")
+md = get_market_data()
 st.markdown(f"""<div style='background:#003366;color:white;padding:8px 16px;border-radius:5px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-family:{FONT_KR};'><span style='font-size:15px;font-weight:700;'>⚡ 한국전력 뉴스 유형분석 자동화 시스템</span><span style='font-size:8px;opacity:.65;'>{datetime.now().strftime('%Y.%m.%d')} | 열독률 등급 기반 | 네이버 뉴스 API</span></div>""", unsafe_allow_html=True)
+st.markdown(mhdr(md), unsafe_allow_html=True)
 
 with st.sidebar:
     st.markdown(f"<h3 style='font-family:{FONT_KR};'>분석 설정</h3>", unsafe_allow_html=True)
