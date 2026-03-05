@@ -596,72 +596,8 @@ def render_report(cd):
     # 위기관리 권고 (조건부)
     show_crisis_recommendation(pr_s, pr_l, label)
 
-    # ═══ 조사 개요 블록 ═══
-    neg_media_list = df[df['감성']=='부정']['매체'].value_counts().head(4)
-    pos_media_list = df[df['감성']=='긍정']['매체'].value_counts().head(3)
-    neu_media_list = df[df['감성']=='중립']['매체'].value_counts().head(3)
 
-    def media_row(mv, color):
-        items = [f"<span style='display:inline-block;background:{color}15;border:1px solid {color}44;border-radius:12px;padding:2px 8px;font-size:10px;color:{color};margin:2px 2px;font-weight:600;'>{m}({n}건)</span>" for m,n in mv.items()]
-        return "".join(items) if items else "<span style='font-size:10px;color:#aaa;'>해당없음</span>"
-
-    neg_media_html = media_row(neg_media_list, "#C62828")
-    pos_media_html = media_row(pos_media_list, "#1565C0")
-    neu_media_html = media_row(neu_media_list, "#555555")
-
-    # 부정 주요 이슈 TOP3
-    neg_cats = df[df['감성']=='부정']['카테고리'].value_counts().head(3)
-    issue_html = "".join([f"<li style='font-size:11px;color:#333;margin-bottom:3px;'><b>{cat}</b> ({n}건)</li>" for cat,n in neg_cats.items()])
-    pos_cats = df[df['감성']=='긍정']['카테고리'].value_counts().head(3)
-    pos_issue_html = "".join([f"<li style='font-size:11px;color:#333;margin-bottom:3px;'><b>{cat}</b> ({n}건)</li>" for cat,n in pos_cats.items()])
-
-    tone_overall = "부정 우세" if neg_n > pos_n*1.5 else "긍정 우세" if pos_n > neg_n*1.5 else "균형"
-    tone_color   = "#C62828" if neg_n > pos_n*1.5 else "#1565C0" if pos_n > neg_n*1.5 else "#555"
-
-    st.markdown(f"""<div style='background:white;border:1px solid #ddd;border-radius:8px;padding:16px 20px;margin-bottom:12px;font-family:{FONT_KR};'>
-  <div style='font-size:16px;font-weight:800;color:#003366;margin-bottom:12px;border-bottom:2px solid #003366;padding-bottom:6px;'>
-    📋 {label} 언론보도 분석 — 조사 개요
-  </div>
-  <div style='display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;'>
-    <div style='flex:1;min-width:140px;background:#F4F6F9;border-radius:6px;padding:10px 14px;'>
-      <div style='font-size:9px;font-weight:700;color:#888;letter-spacing:.8px;margin-bottom:4px;'>조사 기간</div>
-      <div style='font-size:12px;font-weight:700;color:#003366;'>{period_str}</div>
-    </div>
-    <div style='flex:1;min-width:140px;background:#F4F6F9;border-radius:6px;padding:10px 14px;'>
-      <div style='font-size:9px;font-weight:700;color:#888;letter-spacing:.8px;margin-bottom:4px;'>분석 방법</div>
-      <div style='font-size:12px;font-weight:700;color:#003366;'>네이버 뉴스 API<br>키워드·감성 분석</div>
-    </div>
-    <div style='flex:1;min-width:140px;background:#F4F6F9;border-radius:6px;padding:10px 14px;'>
-      <div style='font-size:9px;font-weight:700;color:#888;letter-spacing:.8px;margin-bottom:4px;'>분석 범위</div>
-      <div style='font-size:12px;font-weight:700;color:#003366;'>논조 구분, 매체별 비중<br>키워드·이슈 우선순위</div>
-    </div>
-    <div style='flex:1;min-width:140px;background:#F4F6F9;border-radius:6px;padding:10px 14px;'>
-      <div style='font-size:9px;font-weight:700;color:#888;letter-spacing:.8px;margin-bottom:4px;'>총 수집 기사</div>
-      <div style='font-size:14px;font-weight:800;color:#003366;'>{total}건</div>
-      <div style='font-size:10px;color:{tone_color};font-weight:700;'>{tone_overall} 기조</div>
-    </div>
-  </div>
-  <div style='display:flex;gap:12px;flex-wrap:wrap;'>
-    <div style='flex:2;min-width:200px;'>
-      <div style='font-size:11px;font-weight:800;color:#C62828;margin-bottom:5px;'>🔴 부정 논조 주요 매체 ({neg_n}건 · {neg_rate:.0f}%)</div>
-      <div style='margin-bottom:8px;'>{neg_media_html}</div>
-      <div style='font-size:11px;font-weight:800;color:#1565C0;margin-bottom:5px;'>🔵 긍정 논조 주요 매체 ({pos_n}건 · {pos_rate:.0f}%)</div>
-      <div style='margin-bottom:8px;'>{pos_media_html}</div>
-      <div style='font-size:11px;font-weight:800;color:#555;margin-bottom:5px;'>⚫ 중립 논조 주요 매체 ({neu_n}건 · {neu_n/total*100:.0f}%)</div>
-      <div>{neu_media_html}</div>
-    </div>
-    <div style='flex:1;min-width:160px;'>
-      <div style='font-size:11px;font-weight:800;color:#C62828;margin-bottom:5px;'>주요 비판 이슈</div>
-      <ul style='margin:0;padding-left:14px;'>{issue_html}</ul>
-    </div>
-    <div style='flex:1;min-width:160px;'>
-      <div style='font-size:11px;font-weight:800;color:#1565C0;margin-bottom:5px;'>주요 긍정 이슈</div>
-      <ul style='margin:0;padding-left:14px;'>{pos_issue_html}</ul>
-    </div>
-  </div>
-</div>""", unsafe_allow_html=True)
-
-    # ═══ 00. KPI + 결론 ═══
+    # ═══ 01. KPI + 결론 ═══
     divider("01 · 요약 및 제언")
     k1,k2,k3,k4,k5,k6=st.columns(6)
     for col,val,lbl,color,sub in [
@@ -683,12 +619,30 @@ def render_report(cd):
     with g2:
         paired0 = gen_paired_insights(criticisms)
         a0 = paired0[0]['db']['action'] if paired0 else "—"
-        a1 = paired0[1]['db']['action'] if len(paired0)>1 else "—"
-        st.markdown(f"""<div style='background:#F8F9FA;border-left:3px solid #003366;border-radius:0 4px 4px 0;padding:10px 14px;font-size:12px;line-height:1.8;font-family:{FONT_KR};'>
-        <span style='color:#003366;font-weight:700;'>핵심 비판:</span> {top_neg_cat} &nbsp;|&nbsp; <span style='color:#003366;font-weight:700;'>부정 키워드:</span> {neg_kw_str}<br>
-        <span style='color:#003366;font-weight:700;'>부정 집중 매체:</span> {top_neg_m}<br>
-        <span style='color:#003366;font-weight:700;'>결론:</span> {insights_text[:120]}…<br>
-        <span style='color:#C62828;font-weight:700;'>즉각 대응:</span> {a0}
+        # 논조 평가 문장
+        if neg_n > pos_n * 1.5:
+            tone_eval = f"부정 보도({neg_rate:.0f}%)가 긍정 보도({pos_rate:.0f}%)를 크게 상회하여 언론 환경이 전반적으로 부정적입니다."
+        elif pos_n > neg_n * 1.5:
+            tone_eval = f"긍정 보도({pos_rate:.0f}%)가 부정 보도({neg_rate:.0f}%)를 상회하여 비교적 균형 있는 언론 환경이 유지되고 있습니다."
+        else:
+            tone_eval = f"부정 보도 {neg_rate:.0f}%, 긍정 보도 {pos_rate:.0f}%로 비교적 균형 있는 언론 환경이 유지되고 있습니다."
+        top_neg_kw_str = neg_kws[0][0] if neg_kws else "—"
+        # 기타 제외 부정/긍정 상위 이슈 추출
+        neg_issue_list = [c for c in df[df["감성"]=="부정"]["카테고리"].value_counts().index if c != "기타"][:3]
+        pos_issue_list = [c for c in df[df["감성"]=="긍정"]["카테고리"].value_counts().index if c != "기타"][:2]
+        neg_issues_str = ", ".join(neg_issue_list) if neg_issue_list else top_neg_cat
+        pos_issues_str = ", ".join(pos_issue_list) if pos_issue_list else top_pos_cat
+        summary_text = (
+            f"{period_str} 네이버 기사 전체 {total}건을 전수 분석했습니다. "
+            f"기간 내 {tone_eval} "
+            f"'{top_neg_kw_str}' 키워드가 부정 보도의 핵심이며 "
+            f"언론 리스크는 {pr_s}점({pr_l})입니다. "
+            f"위기관리 차원에서 선제적 대응과 '{neg_issues_str}' 이슈에 대한 공식 입장 발표가 권고됩니다. "
+            f"반면 '{pos_issues_str}'와 관련한 보도는 긍정적 흐름을 보이고 있어 홍보 자원 집중이 권고됩니다."
+        )
+        st.markdown(f"""<div style='background:#F8F9FA;border-left:3px solid #003366;border-radius:0 4px 4px 0;padding:12px 16px;font-size:12.5px;line-height:2.0;font-family:{FONT_KR};color:#222;'>
+        {summary_text}
+        <br><span style='color:#C62828;font-weight:700;font-size:11px;'>▶ 즉각 대응: {a0}</span>
         </div>""", unsafe_allow_html=True)
 
     # ═══ 01. 워드클라우드 ═══
@@ -1053,8 +1007,12 @@ if run:
         pos_n=int(cv.get("긍정",0)); neg_n=int(cv.get("부정",0)); neu_n=int(cv.get("중립",0))
         period_str=f"{start_date.strftime('%Y.%m.%d')} ~ {end_date.strftime('%m.%d')}"
         top3m=", ".join(list(df["매체"].value_counts().index[:3]))
-        tnc=df[df["감성"]=="부정"]["카테고리"].value_counts().index[0] if neg_n>0 else "없음"
-        tpc=df[df["감성"]=="긍정"]["카테고리"].value_counts().index[0] if pos_n>0 else "없음"
+        neg_cats_vc = df[df["감성"]=="부정"]["카테고리"].value_counts()
+        neg_cats_filtered = [c for c in neg_cats_vc.index if c != "기타"]
+        tnc = neg_cats_filtered[0] if neg_cats_filtered else (neg_cats_vc.index[0] if neg_n>0 else "없음")
+        pos_cats_vc = df[df["감성"]=="긍정"]["카테고리"].value_counts()
+        pos_cats_filtered = [c for c in pos_cats_vc.index if c != "기타"]
+        tpc = pos_cats_filtered[0] if pos_cats_filtered else (pos_cats_vc.index[0] if pos_n>0 else "없음")
         nk=extract_kws(arts,"부정"); uk=[]; pk=extract_kws(arts,"긍정")
         tnkw=nk[0][0] if nk else None
         daily=df.groupby("일자").size()
