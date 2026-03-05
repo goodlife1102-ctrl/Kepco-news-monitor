@@ -73,7 +73,7 @@ TOPIC_GROUPS = {
     "AI·디지털혁신":["AI","인공지능","디지털","스마트","자동화","AX","빅데이터"],
     "공기업·거버넌스":["공기업","감사","이사회","투명","거버넌스","윤리","비리"],
     "고객·서비스":["서비스","고객","민원","복지","국민","전기복지"],
-    "정책·규제":["정책","규제","법안","제도","정부","국회","의원","경찰","조사","소송","패소"],
+    "정책·규제":["정책","규제","법안","제도","정부","국회","의원","경찰","조사","소송"],
 }
 DISAMBIG_MAP = {"김동철":["한전","사장","한국전력","KEPCO"],"김성환":["장관","산업부"]}
 
@@ -94,7 +94,7 @@ INSIGHT_DB = {
             "취약계층 에너지 복지 수혜자 수 수치화·언론 제공",
             "요금 억제 시 국가 재무 왜곡 시뮬레이션 공개",
         ],
-        "msg": "오늘의 요금 억제는 미래세대의 더 큰 이자 부담으로 돌아옵니다.",
+        "msg": "오늘의 요금 억제는 내일의 더 큰 이자 부담으로 돌아옵니다.",
     },
     "재무·경영": {
         "bg": "사상 최대 부채 보도는 공기업 신뢰도를 직격. 흑자 전환 시에도 '성찰 없는 성과급' 비판이 역풍으로 작용.",
@@ -109,7 +109,7 @@ INSIGHT_DB = {
             "부동산 매각·조직 효율화 구체 사례 스토리화",
             "경제지 전담 관계 강화 및 정기 백브리핑 개최",
         ],
-        "msg": "뼈를 깎는 자구 노력과 요금 정상화로 재무건전성을 높이겠습니다.",
+        "msg": "부채의 늪을 건너는 유일한 길은 뼈를 깎는 자구 노력과 요금 정상화뿐입니다.",
     },
     "전력망·설비": {
         "bg": "송전망 건설 지연은 반도체·산단 공급 차질로 이어지며 국익 이슈로 확산. 지역 반발과 지자체 인허가 거부가 복합 리스크.",
@@ -142,7 +142,7 @@ INSIGHT_DB = {
             "협력사 안전 지원 예산·이행 현황 정량 공개",
             "드론 순시·산불 예방 투자 실적 적극 홍보",
         ],
-        "msg": "안전은 타협할 수 없는 가치이자, 한전의 상식입니다.",
+        "msg": "안전은 효율보다 소중합니다. 사람이 먼저인 현장을 만들겠습니다.",
     },
     "노사관계": {
         "bg": "파업 결의는 공공서비스 안정성 우려로 즉각 확산. MZ세대 이탈·희망퇴직 반발이 내부 리스크로 중첩.",
@@ -159,7 +159,7 @@ INSIGHT_DB = {
             "노사 협상 진행 현황 정기 공개(루머 차단)",
             "MZ세대 조직 문화 개선 카드뉴스 SNS 배포",
         ],
-        "msg": "세계 최고 수준의 전기품질을 계속 유지하겠습니다.",
+        "msg": "어떤 순간에도 대한민국 전력의 심장은 멈추지 않습니다.",
     },
     "탄소중립·에너지전환": {
         "bg": "신재생 전환 지연과 계통 불안정 비판이 이행 속도 논란으로 확산. RE100·OECD 비교가 국제 압박 채널로 작동.",
@@ -183,7 +183,7 @@ INSIGHT_DB = {
             ("저가 수주 덤핑 논란", "Team Korea 압도적 시공 역량과 경제성 데이터로 정면 반박."),
             ("기술 유출·안전 우려", "국제 인증 현황·안전 기준 구체 자료 즉시 공개."),
         ],
-        "action": "바라카 성공 사례 집중 레퍼런스. 계약·협상 현황 정기 업데이트로 불확실성 해소.",
+        "action": "바라카 On-Time·On-Budget 성공 사례 집중 레퍼런스. 계약·협상 현황 정기 업데이트로 불확실성 해소.",
         "steps": [
             "바라카 원전 성공 사례·국제 인증 자료 지속 노출",
             "수출 협상 진행 상황 정기 업데이트 공개",
@@ -236,7 +236,7 @@ INSIGHT_DB = {
             "AI 챗봇 24/7 대응 체계 구축 사실 홍보",
             "취약계층 수혜자 수·전수조사 결과 수치화",
         ],
-        "msg": "100% 서비스 기업으로 거듭난겠습니다.",
+        "msg": "단 한 가구의 불도 꺼지지 않도록 꼼꼼히 살피겠습니다.",
     },
     "정책·규제": {
         "bg": "경찰 조사·소송은 기관 이미지에 즉각 타격. 정부 정책과의 엇박자 논란은 공기업 존재 가치를 흔드는 이슈로 확산.",
@@ -368,7 +368,7 @@ CRISIS_EXECUTION_STRATEGY = [
             ("정책 전문 숏폼 콘텐츠 제작", "어려운 에너지 정책·요금 체계를 1분 영상으로 제작. MZ세대 소통 접점 확대."),
             ("AI 챗봇 24/7 위기대응 FAQ", "위기 시 대량 고객 문의에 AI를 활용한 정확하고 일관된 정보 실시간 제공."),
             ("소셜 리스닝 기반 맞춤형 메시지 송출", "온라인 논란 키워드 분석 후 직접적 해답을 주는 콘텐츠 배포."),
-            ("사내 인플루언서(e-튜버) 육성", "현장 직원의 목소리로 한전 노고와 진정성을 전달하는 친근한 브랜딩 콘텐츠 강화."),
+            ("사내 인플루언서(앰배서더) 육성", "현장 직원의 목소리로 한전 노고와 진정성을 전달하는 친근한 브랜딩 콘텐츠 강화."),
         ],
     },
     {
@@ -379,7 +379,7 @@ CRISIS_EXECUTION_STRATEGY = [
             ("CEO 전사 위기관리 타운홀 미팅", "위기 상황에서 사장이 직접 직원들에게 경영 현황 공유. 주인의식 고취 소통의 장 마련."),
             ("위기 대응 매뉴얼 현장 전파 교육", "홍보처 외 전 사업소 실무자가 위기 시 행동 요령 숙지. 정기 모의 훈련 실시."),
             ("글로벌 에너지 솔루션 기업 이미지 제고", "원전 수출·해외 사업 성과 집중 홍보. 내부 구성원 자부심 고취 및 대외 신뢰도 향상."),
-            ("사후 평가 시스템 도입", "위기 종료 후 대응 과정 정밀 분석·백서 발간. 다음 위기 대응 자산으로 축적."),
+            ("사후 평가 시스템(AAR) 도입", "위기 종료 후 대응 과정 정밀 분석·백서 발간. 다음 위기 대응 자산으로 축적."),
         ],
     },
 ]
@@ -404,7 +404,7 @@ def gen_criticisms(arts, kw):
         "탄소중립·에너지전환":{"title":"탄소중립 이행 실효성","points":["이행 속도 저조 지적","전환 비용 현실성 논란"],"category":"탄소중립·에너지전환"},
         "정책·규제":{"title":"정책 투명성·법적 리스크","points":["일방적 정책 추진 지적","경찰 조사·소송 리스크"],"category":"정책·규제"},
         "원전·수출":{"title":"원전 수출 신뢰성","points":["추진 일정 지연·불확실성","안전 기준 논란"],"category":"원전·수출"},
-        "AI·디지털혁신":{"title":"디지털 전환 실효성","points":["투자 대비 성과 부족","보안·개인정보 노출"],"category":"AI·디지털혁신"},
+        "AI·디지털혁신":{"title":"디지털 전환 실효성","points":["투자 대비 성과 부족","보안·개인정보 리스크"],"category":"AI·디지털혁신"},
         "고객·서비스":{"title":"고객 서비스 대응 미흡","points":["민원 처리 속도 불만","소외계층 접근성 개선 요구"],"category":"고객·서비스"},
     }
     result=[]
@@ -1027,8 +1027,8 @@ def render_report(cd):
         {narrative_text}
         </div>""", unsafe_allow_html=True)
 
-    # ═══ 01. 워드 클라우드 ═══
-    divider("02 · 워드 클라우드")
+    # ═══ 01. 워드클라우드 ═══
+    divider("02 · 워드클라우드")
     wc1, wc2 = st.columns([3,1])
     with wc1:
         fig_wc = plot_wordcloud(df)
@@ -1421,7 +1421,7 @@ with st.sidebar:
             active=(st.session_state.active_key==h['cache_key'])
             if st.button(f"{'▶ ' if active else ''}#{i} {h['keyword']}\n{h['period']} | 부정{nr:.0f}%", key=f"hb_{i}", use_container_width=True):
                 st.session_state.active_key=h['cache_key']; st.rerun()
-    else: st.caption(기존 분석 내용)
+    else: st.caption("분석 후 이력이 쌓입니다")
 
 if run:
     st.session_state.active_key = None
@@ -1445,7 +1445,7 @@ if run:
                 if g["type"]=="AND" and not matches_and(text,g): continue
                 media=get_media(orig,link); gi=MEDIA_GRADE.get(media,{})
                 all_res.append({"키워드그룹":lbl,"일자":ds,"월":ds[:7],"시간":hs,"매체":media,"등급":gi.get("grade","—"),"열독률":gi.get("rate",0.05),"헤드라인":title,"요약":summarize(desc,30),"감성":get_sentiment(text),"카테고리":"","기자":"—","링크":orig if orig else link})
-    if not all_res: st.error("수집된 기사가 없습니다. 문제를 해결하세요."); st.stop()
+    if not all_res: st.error("수집된 기사가 없습니다."); st.stop()
     all_res = auto_cat(all_res)
     all_res = [a for item in [apply_disambig([a],a["키워드그룹"]) for a in all_res] for a in item]
     df_all = pd.DataFrame(all_res)
@@ -1497,4 +1497,4 @@ else:
                 if st.button("열람", key=f"v_{i}", use_container_width=True):
                     st.session_state.active_key=h['cache_key']; st.rerun()
     else:
-        st.markdown(f"""<div style='text-align:center;padding:50px;color:#aaa;font-family:{FONT_KR};'><div style='font-size:32px;'>⚡</div><div style='font-size:15px;font-weight:600;color:#003366;margin-top:8px;'>한국전력 뉴스 유형분석 자동화 시스템</div><div style='font-size:12px;margin-top:6px;'>좌측 키워드 입력 후 🚀 클릭</div></div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div style='text-align:center;padding:50px;color:#aaa;font-family:{FONT_KR};'><div style='font-size:32px;'>⚡</div><div style='font-size:15px;font-weight:600;color:#003366;margin-top:8px;'>한국전력 뉴스 유형분석 자동화 시스템</div><div style='font-size:12px;margin-top:6px;'>좌측 키워드 입력 후 GO 클릭</div></div>""", unsafe_allow_html=True)
