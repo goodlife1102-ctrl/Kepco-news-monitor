@@ -2107,6 +2107,30 @@ with st.sidebar:
     with st.expander(f"{status_icon} 뉴스 알리미 구독 설정", expanded=False):
         st.markdown(f"<div style='font-size:10px;color:#888;margin-bottom:8px;font-family:{FONT_KR};'>{last_txt}</div>", unsafe_allow_html=True)
 
+        # ── 관리자 인증 게이트 ──
+        ADMIN_PW = "kepco2025"   # ← 관리자 비밀번호 (여기서 변경)
+        if "sub_admin_ok" not in st.session_state:
+            st.session_state.sub_admin_ok = False
+
+        if not st.session_state.sub_admin_ok:
+            st.markdown(f"<div style='font-size:11px;color:#C62828;font-weight:700;margin-bottom:6px;font-family:{FONT_KR};'>🔒 관리자 비밀번호를 입력해야 설정을 확인할 수 있습니다.</div>", unsafe_allow_html=True)
+            with st.form("admin_gate_form", clear_on_submit=True):
+                entered_pw = st.text_input("관리자 비밀번호", type="password", placeholder="비밀번호 입력")
+                gate_btn = st.form_submit_button("🔓 잠금 해제", use_container_width=True)
+            if gate_btn:
+                if entered_pw == ADMIN_PW:
+                    st.session_state.sub_admin_ok = True
+                    st.rerun()
+                else:
+                    st.error("비밀번호가 올바르지 않습니다.")
+            st.stop()
+
+        # ── 잠금 해제 상태 ──
+        st.markdown(f"<div style='font-size:10px;color:#2E7D32;font-weight:700;margin-bottom:8px;font-family:{FONT_KR};'>🔓 관리자 인증 완료</div>", unsafe_allow_html=True)
+        if st.button("🔒 잠금", key="sub_lock_btn", use_container_width=False):
+            st.session_state.sub_admin_ok = False
+            st.rerun()
+
         with st.form("sub_form", clear_on_submit=False):
             sub_keyword = st.text_input(
                 "검색 키워드", value=sub_cfg.get("keyword", "한국전력"),
@@ -2132,7 +2156,7 @@ with st.sidebar:
                 placeholder="a@example.com, b@example.com",
                 height=68
             )
-            st.markdown("<div style='font-size:11px;font-weight:700;color:#003366;margin:8px 0 4px;'>⏰ 발송 시각 (기본: 06:30)</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='font-size:11px;font-weight:700;color:#003366;margin:8px 0 4px;font-family:{FONT_KR};'>발송 시각 설정 (기본: 06:30)</div>", unsafe_allow_html=True)
             tc1, tc2 = st.columns(2)
             with tc1:
                 sub_hour   = st.number_input("시(Hour)",   min_value=0, max_value=23, value=int(sub_cfg.get("send_hour", 6)),   step=1)
@@ -2180,6 +2204,7 @@ with st.sidebar:
 → POP3/SMTP 설정 → <b>SMTP 사용 선택</b><br>
 → 내 정보 → 보안설정 → <b>앱 비밀번호 발급</b>
 </div>""", unsafe_allow_html=True)
+
 
 
 if run:
