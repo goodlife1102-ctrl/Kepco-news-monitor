@@ -918,7 +918,7 @@ def build_email_html(arts, df, label, period_str):
   <!-- 헤더 -->
   <div style='background:#003366;color:white;padding:20px 24px;'>
     <div style='font-size:20px;font-weight:800;'>⚡ {label} 언론보도 유형분석 리포트</div>
-    <div style='font-size:11px;opacity:.75;margin-top:5px;'>{period_str} | {now_str} 자동 발송 | 키워드로 오늘의 뉴스 뜯어보기_by 글쓰는 여행자</div>
+    <div style='font-size:11px;opacity:.75;margin-top:5px;'>{period_str} | {now_str} 자동 발송 | 홍보실에 꼭 필요한 뉴스 분석시스템 <span style="font-size:9px;opacity:.7;">by 글쓰는 여행자</span></div>
   </div>
 
   <!-- KPI 카드 -->
@@ -1033,7 +1033,7 @@ def build_email_html(arts, df, label, period_str):
 
   <!-- 푸터 -->
   <div style='background:#f8f8f8;padding:14px 24px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;'>
-    ⚡ 키워드로 오늘의 뉴스 뜯어보기_by 글쓰는 여행자 &nbsp;|&nbsp; 네이버 뉴스 API 기반 자동 분석 &nbsp;|&nbsp; 열독률: 언론진흥재단('23)<br>
+    ⚡ 홍보실에 꼭 필요한 뉴스 분석시스템 &nbsp;<span style="font-size:9px;opacity:.7;">by 글쓰는 여행자</span> &nbsp;|&nbsp; 네이버 뉴스 API 기반 자동 분석 &nbsp;|&nbsp; 열독률: 언론진흥재단('23)<br>
     본 메일은 구독 설정에 따라 자동 발송되었습니다. 수신을 원하지 않으면 앱에서 구독을 해제해 주세요.
   </div>
 </div>
@@ -1121,7 +1121,7 @@ def build_email_html(arts, df, label, period_str):
 <div class='wrap'>
   <div class='hdr'>
     <div style='font-size:18px;font-weight:800;'>⚡ {label} 뉴스 모니터링 리포트</div>
-    <div style='font-size:11px;opacity:.75;margin-top:4px;'>{period_str} | {now_str} 발송 | 키워드로 오늘의 뉴스 뜯어보기_by 글쓰는 여행자</div>
+    <div style='font-size:11px;opacity:.75;margin-top:4px;'>{period_str} | {now_str} 발송 | 홍보실에 꼭 필요한 뉴스 분석시스템 <span style="font-size:9px;opacity:.7;">by 글쓰는 여행자</span></div>
   </div>
   <div class='body'>
 
@@ -1176,7 +1176,7 @@ def build_email_html(arts, df, label, period_str):
 
   </div>
   <div class='ftr'>
-    ⚡ 키워드로 오늘의 뉴스 뜯어보기_by 글쓰는 여행자 &nbsp;|&nbsp; 네이버 뉴스 API 기반 자동 분석 &nbsp;|&nbsp; 열독률: 언론진흥재단('23)<br>
+    ⚡ 홍보실에 꼭 필요한 뉴스 분석시스템 &nbsp;<span style="font-size:9px;opacity:.7;">by 글쓰는 여행자</span> &nbsp;|&nbsp; 네이버 뉴스 API 기반 자동 분석 &nbsp;|&nbsp; 열독률: 언론진흥재단('23)<br>
     본 메일은 구독 설정에 따라 자동 발송되었습니다. 수신을 원하지 않으면 앱에서 구독을 해제해 주세요.
   </div>
 </div>
@@ -1234,7 +1234,7 @@ def send_email_report(cfg, test_addr=None):
             server.login(cfg["sender_email"], cfg["sender_pw"])
             for sub in targets:
                 label = sub.get("keyword", "한국전력")
-                days  = cfg.get("days", 1)
+                days  = sub.get("days", cfg.get("days", 1))  # 구독자별 설정 우선
                 arts, df, period_str = _collect_news_for(label, days)
                 if arts is None:
                     fail_list.append(f"{sub['email']}(기사 없음)")
@@ -2659,11 +2659,11 @@ def render_report(cd):
     with dl3:
         components.html("""<button id="cpbtn" onclick="(function(){var u=window.parent.location.href;navigator.clipboard.writeText(u).then(function(){document.getElementById('cpbtn').innerText='✅ 복사됨!';document.getElementById('cpbtn').style.background='#2E7D32';setTimeout(function(){document.getElementById('cpbtn').innerText='🔗 링크 복사';document.getElementById('cpbtn').style.background='#003366';},2000);});})();" style="background:#003366;color:white;border:none;padding:8px 16px;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;width:100%;">🔗 링크 복사</button>""", height=40)
 
-    st.markdown(f"<div style='background:#003366;color:white;text-align:center;padding:7px;border-radius:4px;margin-top:10px;font-size:10px;opacity:.8;font-family:{FONT_KR};'>⚡ 키워드로 오늘의 뉴스 뜯어보기_by 글쓰는 여행자 | {(datetime.utcnow()+timedelta(hours=9)).strftime('%Y.%m.%d')} | 열독률: 언론진흥재단('23)</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='background:#003366;color:white;text-align:center;padding:7px;border-radius:4px;margin-top:10px;font-size:10px;opacity:.8;font-family:{FONT_KR};'>⚡ 홍보실에 꼭 필요한 뉴스 분석시스템 <span style='font-size:8px;opacity:.75;'>by 글쓰는 여행자</span> | {(datetime.utcnow()+timedelta(hours=9)).strftime('%Y.%m.%d')} | 열독률: 언론진흥재단('23)</div>", unsafe_allow_html=True)
     st.markdown("---")
 
 # ══ APP ═══════════════════════════════════════════════
-st.set_page_config(page_title="키워드로 오늘의 뉴스 뜯어보기_by 글쓰는 여행자", layout="wide", page_icon="⚡", initial_sidebar_state="expanded")
+st.set_page_config(page_title="홍보실에 꼭 필요한 뉴스 분석시스템_by 글쓰는 여행자", layout="wide", page_icon="⚡", initial_sidebar_state="expanded")
 st.markdown(f"""<style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;800&display=swap');
 .main .block-container{{padding-top:.5rem;padding-bottom:.5rem;max-width:1400px;}}
@@ -2689,7 +2689,7 @@ _custom_ticker = st.session_state.get("header_ticker", "")
 _custom_name   = st.session_state.get("header_company", "")
 md = get_market_data(custom_ticker=_custom_ticker)
 md["custom_name"] = _custom_name  # 표시명 덮어쓰기
-st.markdown(f"""<div style='background:#003366;color:white;padding:8px 16px;border-radius:5px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-family:{FONT_KR};'><span style='font-size:15px;font-weight:700;'>⚡ 키워드로 오늘의 뉴스 뜯어보기_by 글쓰는 여행자</span><span style='font-size:8px;opacity:.65;'>{(datetime.utcnow()+timedelta(hours=9)).strftime('%Y.%m.%d')} | 열독률 등급 기반 | 네이버 뉴스 API</span></div>""", unsafe_allow_html=True)
+st.markdown(f"""<div style='background:#003366;color:white;padding:8px 16px;border-radius:5px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-family:{FONT_KR};'><span style='font-size:15px;font-weight:700;'>⚡ 홍보실에 꼭 필요한 뉴스 분석시스템</span><span style='font-size:10px;opacity:.7;margin-left:6px;'>by 글쓰는 여행자</span><span style='font-size:8px;opacity:.65;'>{(datetime.utcnow()+timedelta(hours=9)).strftime('%Y.%m.%d')} | 열독률 등급 기반 | 네이버 뉴스 API</span></div>""", unsafe_allow_html=True)
 st.markdown(mhdr(md), unsafe_allow_html=True)
 
 with st.sidebar:
@@ -2742,12 +2742,26 @@ with st.sidebar:
         with st.form("user_sub_form", clear_on_submit=True):
             user_email  = st.text_input("내 이메일", placeholder="my@email.com", label_visibility="collapsed")
             user_kw     = st.text_input("받고 싶은 키워드", value="", placeholder="예: 한국전력, 원전, 전기요금")
+            user_days   = st.selectbox(
+                "📅 수집 기간",
+                [1, 2, 3, 7],
+                index=0,
+                format_func=lambda x: f"최근 {x}일" if x < 7 else "최근 1주일 (심층 분석)",
+                help="리포트에 포함할 기사 수집 기간. 길수록 트렌드 분석에 유리합니다."
+            )
             # 회사명 자동검색 (KRX 티커 자동 매핑)
             user_co_name = st.text_input(
                 "📌 내 회사명 (선택) — 입력하면 헤더에 실시간 주가 표시",
-                value="", placeholder="예: 삼성전자, SK하이닉스, LG에너지솔루션"
+                value="", placeholder="예: 삼성전자, SK하이닉스, 한국전력"
             )
             st.caption("코스피·코스닥 상장사명 입력 시 티커 자동 조회")
+            user_days = st.selectbox(
+                "📅 리포트 수집 기간",
+                [1, 2, 3, 7],
+                index=0,
+                format_func=lambda x: f"최근 {x}일" if x < 7 else "최근 1주일",
+                help="리포트에 포함할 기사 수집 범위입니다. 기간이 길수록 트렌드 분석에 유리합니다."
+            )
             uh1, uh2    = st.columns(2)
             with uh1:
                 user_hour   = st.number_input("발송 시각 (0~23시)", min_value=0, max_value=23, value=6, step=1)
@@ -2783,6 +2797,7 @@ with st.sidebar:
                                 s["keyword"]        = user_kw.strip() or "뉴스"
                                 s["send_hour"]      = int(user_hour)
                                 s["send_minute"]    = int(user_minute)
+                                s["days"]           = int(user_days)
                                 if resolved_ticker:
                                     s["company_name"]   = resolved_name
                                     s["company_ticker"] = resolved_ticker
@@ -2800,6 +2815,7 @@ with st.sidebar:
                             "keyword":        user_kw.strip() or "뉴스",
                             "send_hour":      int(user_hour),
                             "send_minute":    int(user_minute),
+                            "days":           int(user_days),
                             "company_name":   resolved_name,
                             "company_ticker": resolved_ticker,
                             "joined_at":      (datetime.utcnow()+timedelta(hours=9)).strftime("%Y-%m-%d %H:%M"),
@@ -2869,17 +2885,18 @@ with st.sidebar:
                     st.session_state.del_checks = {}
 
                 # 헤더 행
-                hd1, hd2, hd3, hd4, hd5 = st.columns([0.5, 3, 3, 1.5, 1])
+                hd1, hd2, hd3, hd4, hd5, hd6 = st.columns([0.5, 3, 3, 1.2, 1, 1])
                 hd1.markdown("<div style='font-size:9px;color:#888;'>선택</div>", unsafe_allow_html=True)
                 hd2.markdown("<div style='font-size:9px;color:#888;font-weight:700;'>이메일</div>", unsafe_allow_html=True)
                 hd3.markdown("<div style='font-size:9px;color:#888;font-weight:700;'>키워드</div>", unsafe_allow_html=True)
                 hd4.markdown("<div style='font-size:9px;color:#888;font-weight:700;'>발송시각</div>", unsafe_allow_html=True)
-                hd5.markdown("<div style='font-size:9px;color:#888;font-weight:700;'>가입일</div>", unsafe_allow_html=True)
+                hd5.markdown("<div style='font-size:9px;color:#888;font-weight:700;'>수집기간</div>", unsafe_allow_html=True)
+                hd6.markdown("<div style='font-size:9px;color:#888;font-weight:700;'>가입일</div>", unsafe_allow_html=True)
                 st.markdown("<hr style='margin:2px 0 4px;border-color:#ddd;'>", unsafe_allow_html=True)
 
                 for idx_s, s in enumerate(adm_subs):
                     email_key = s["email"].lower()
-                    c1, c2, c3, c4, c5 = st.columns([0.5, 3, 3, 1.5, 1])
+                    c1, c2, c3, c4, c5, c6 = st.columns([0.5, 3, 3, 1.2, 1, 1])
                     with c1:
                         checked = st.checkbox("", key=f"del_chk_{idx_s}",
                                               value=st.session_state.del_checks.get(email_key, False),
@@ -2897,6 +2914,10 @@ with st.sidebar:
                         st.markdown(f"<div style='font-size:11px;padding-top:6px;text-align:center;'>"
                                     f"{s.get('send_hour',6):02d}:{s.get('send_minute',30):02d}</div>", unsafe_allow_html=True)
                     with c5:
+                        d_val = s.get("days", 1)
+                        d_lbl = f"{d_val}일" if d_val < 7 else "1주"
+                        st.markdown(f"<div style='font-size:11px;padding-top:6px;text-align:center;color:#555;'>{d_lbl}</div>", unsafe_allow_html=True)
+                    with c6:
                         joined = s.get("joined_at","")[:10] if s.get("joined_at") else "—"
                         st.markdown(f"<div style='font-size:9px;padding-top:6px;color:#aaa;'>{joined}</div>", unsafe_allow_html=True)
 
@@ -2930,11 +2951,6 @@ with st.sidebar:
                 st.caption("구독자 없음")
 
             with st.form("sub_form", clear_on_submit=False):
-                sub_days = st.selectbox(
-                    "수집 기간", [1, 2, 3, 7],
-                    index=[1,2,3,7].index(adm.get("days", 1)),
-                    format_func=lambda x: f"최근 {x}일"
-                )
                 st.markdown(
                     f"<div style='font-size:11px;font-weight:700;color:#003366;margin:8px 0 4px;"
                     f"font-family:{FONT_KR};'>네이버 발신 계정</div>",
@@ -2952,7 +2968,6 @@ with st.sidebar:
                     "enabled":      sub_enabled,
                     "sender_email": sub_sender.strip(),
                     "sender_pw":    sub_pw,
-                    "days":         int(sub_days),
                 })
                 if save_sub(adm):
                     apply_scheduler(adm)
@@ -3051,4 +3066,4 @@ else:
                 if st.button("열람", key=f"v_{i}", use_container_width=True):
                     st.session_state.active_key=h['cache_key']; st.rerun()
     else:
-        st.markdown(f"""<div style='text-align:center;padding:50px;color:#aaa;font-family:{FONT_KR};'><div style='font-size:32px;'>⚡</div><div style='font-size:15px;font-weight:600;color:#003366;margin-top:8px;'>키워드로 오늘의 뉴스 뜯어보기_by 글쓰는 여행자</div><div style='font-size:12px;margin-top:6px;'>좌측 키워드 입력 후 🚀 클릭</div></div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div style='text-align:center;padding:50px;color:#aaa;font-family:{FONT_KR};'><div style='font-size:32px;'>⚡</div><div style='font-size:15px;font-weight:600;color:#003366;margin-top:8px;'>홍보실에 꼭 필요한 뉴스 분석시스템 <span style="font-size:9px;opacity:.7;">by 글쓰는 여행자</span></div><div style='font-size:12px;margin-top:6px;'>좌측 키워드 입력 후 🚀 클릭</div></div>""", unsafe_allow_html=True)
