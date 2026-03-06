@@ -782,7 +782,7 @@ def build_email_html(arts, df, label, period_str):
     pr_s, pr_l, pr_c = calc_pr_risk(neg_n, total, nk, False, neg_med)
     pr_l_kr = {"HIGH":"높음","MEDIUM":"보통","LOW":"낮음"}.get(pr_l, pr_l)
     pr_bg   = "#FFEBEE" if pr_s>=70 else "#FFF3E0" if pr_s>=40 else "#E8F5E9"
-    now_str = datetime.now().strftime("%Y년 %m월 %d일 %H:%M")
+    now_str = (datetime.utcnow()+timedelta(hours=9)).strftime("%Y년 %m월 %d일 %H:%M")
 
     # ── 00. 요약 서술 ──
     neg_top1_kw = nk[0][0] if nk else "해당없음"
@@ -1102,7 +1102,7 @@ def build_email_html(arts, df, label, period_str):
     tone_txt = "부정 우세" if neg_n > pos_n * 1.5 else "긍정 우세" if pos_n > neg_n * 1.5 else "균형"
     pr_bg = "#FFEBEE" if pr_s >= 70 else "#FFF3E0" if pr_s >= 40 else "#E8F5E9"
 
-    now_str = datetime.now().strftime("%Y년 %m월 %d일 %H:%M")
+    now_str = (datetime.utcnow()+timedelta(hours=9)).strftime("%Y년 %m월 %d일 %H:%M")
 
     html = f"""<!DOCTYPE html>
 <html><head><meta charset='utf-8'>
@@ -1243,7 +1243,7 @@ def send_email_report(cfg, test_addr=None):
                     html_body = build_email_html(arts, df, label, period_str)
                     addr      = sub["email"]
                     subject   = (f"[KEPCO 뉴스] {label} 모니터링 리포트 — "
-                                 f"{datetime.now().strftime('%Y.%m.%d')}")
+                                 f"{(datetime.utcnow()+timedelta(hours=9)).strftime('%Y.%m.%d')}")
                     msg = MIMEMultipart("alternative")
                     msg["Subject"] = subject
                     msg["From"]    = cfg["sender_email"]
@@ -1253,7 +1253,7 @@ def send_email_report(cfg, test_addr=None):
                 except Exception as e:
                     fail_list.append(f"{sub['email']}({e})")
 
-        cfg["last_sent"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+        cfg["last_sent"] = (datetime.utcnow()+timedelta(hours=9)).strftime("%Y-%m-%d %H:%M")
         save_sub(cfg)
 
         if fail_list:
@@ -1308,12 +1308,12 @@ def apply_scheduler(cfg):
                             if arts is None: continue
                             html_body = build_email_html(arts, df, label, period_str)
                             addr = sub["email"]
-                            subject = f"[KEPCO 뉴스] {label} 모니터링 리포트 — {datetime.now().strftime('%Y.%m.%d')}"
+                            subject = f"[KEPCO 뉴스] {label} 모니터링 리포트 — {(datetime.utcnow()+timedelta(hours=9)).strftime('%Y.%m.%d')}"
                             msg = MIMEMultipart("alternative")
                             msg["Subject"]=subject; msg["From"]=c["sender_email"]; msg["To"]=addr
                             msg.attach(MIMEText(html_body,"html","utf-8"))
                             srv.sendmail(c["sender_email"],[addr],msg.as_string())
-                    c["last_sent"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+                    c["last_sent"] = (datetime.utcnow()+timedelta(hours=9)).strftime("%Y-%m-%d %H:%M")
                     save_sub(c)
                 except Exception: pass
             return fn
@@ -1359,68 +1359,143 @@ def lookup_krx_ticker(company_name):
 
 @st.cache_data(ttl=3600)
 def get_weekly_pres_schedule():
-    """대통령실 금주 일정 2~3건 수집"""
-    schedules = []
-    # 시도 1: 대통령실 공식 RSS
+    """대통령실 캘린더(https://www.president.go.kr/president/calendar)에서
+    오늘 이후 향후 일정 2~3건을 수집해 1줄 문자열로 반환.
+    파싱 실패 시 빈 문자열 반환."""
     try:
-        for url in [
-            "https://www.president.go.kr/rss/schedule",
-            "https://www.president.go.kr/newsroom/schedule",
-        ]:
-            r = requests.get(url, headers={"User-Agent":"Mozilla/5.0"}, timeout=4)
-            if r.status_code != 200:
-                continue
-            # CDATA 방식과 일반 방식 모두 파싱
-            items = re.findall(
-                r"<item>.*?<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</title>.*?<pubDate>(.*?)</pubDate>.*?</item>",
-                r.text, re.DOTALL
-            )
-            if not items:
-                items_t = re.findall(r"<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</title>", r.text)
-                items_d = re.findall(r"<pubDate>(.*?)</pubDate>", r.text)
-                items   = list(zip(items_t[1:], items_d)) if items_d else [(t,"") for t in items_t[1:]]
+        from datetime import date as _date
+        kst_now  = datetime.utcnow() + timedelta(hours=9)
+        today    = kst_now.date()
 
-            # 금주(월~일) 필터
-            week_start = datetime.now() - timedelta(days=datetime.now().weekday())
-            week_end   = week_start + timedelta(days=6)
-            for title, pub in items[:10]:
-                title = title.strip()
-                if not title or len(title) < 2:
+        # ── 시도 1: 대통령실 캘린더 페이지 직접 파싱 ──
+        # 캘린더 페이지가 FullCalendar 기반 SPA인 경우 API 엔드포인트로 요청
+        entries = []
+        api_urls = [
+            # 공식 JSON API 후보 (실제 배포 환경에서 동작)
+            f"https://www.president.go.kr/api/schedule/list?startDate={today.strftime('%Y-%m-01')}&endDate={(today + timedelta(days=60)).strftime('%Y-%m-%d')}",
+            "https://www.president.go.kr/president/calendar/getScheduleList.do",
+        ]
+        for api_url in api_urls:
+            try:
+                resp = requests.get(api_url,
+                    headers={"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                             "Referer":"https://www.president.go.kr/president/calendar",
+                             "Accept":"application/json, text/html, */*"},
+                    timeout=5)
+                if resp.status_code != 200:
                     continue
-                # 날짜 파싱 시도
-                try:
-                    from email.utils import parsedate_to_datetime
-                    pub_dt = parsedate_to_datetime(pub.strip())
-                    if not (week_start.date() <= pub_dt.date() <= week_end.date()):
-                        continue
-                except:
-                    pass  # 날짜 파싱 실패 시 그냥 포함
-                if title not in schedules:
-                    schedules.append(title)
-                if len(schedules) >= 3:
+                ct = resp.headers.get("Content-Type","")
+                if "json" in ct:
+                    data = resp.json()
+                    # 일반적 응답 구조 탐색
+                    rows = (data.get("data") or data.get("list") or
+                            data.get("result") or data.get("schedules") or
+                            (data if isinstance(data, list) else []))
+                    for row in rows:
+                        title   = str(row.get("title") or row.get("subjectNm") or row.get("scheduleNm","")).strip()
+                        date_s  = str(row.get("startDate") or row.get("scheduleDate") or row.get("date",""))[:10]
+                        if not title or not date_s:
+                            continue
+                        try:
+                            ev_date = datetime.strptime(date_s, "%Y-%m-%d").date()
+                        except:
+                            continue
+                        if ev_date >= today:
+                            entries.append((ev_date, title))
+                elif "html" in ct:
+                    # HTML 내 script 태그에서 JSON 추출 시도
+                    json_blobs = re.findall(r'scheduleData\s*=\s*(\[.*?\]);', resp.text, re.DOTALL)
+                    for blob in json_blobs:
+                        try:
+                            rows = __import__('json').loads(blob)
+                            for row in rows:
+                                title  = str(row.get("title","")).strip()
+                                date_s = str(row.get("start") or row.get("date",""))[:10]
+                                if title and date_s:
+                                    try:
+                                        ev_date = datetime.strptime(date_s, "%Y-%m-%d").date()
+                                        if ev_date >= today:
+                                            entries.append((ev_date, title))
+                                    except: pass
+                        except: pass
+                if entries:
                     break
-            if schedules:
-                break
-    except: pass
+            except: continue
 
-    # 시도 2: 네이버 뉴스 검색 대체 (RSS 실패 시)
-    if not schedules:
-        try:
-            r = requests.get(
-                "https://openapi.naver.com/v1/search/news.json",
-                headers={"X-Naver-Client-Id": CLIENT_ID, "X-Naver-Client-Secret": CLIENT_SECRET},
-                params={"query": "대통령 일정", "display": 5, "sort": "date"},
-                timeout=4
-            )
-            items = r.json().get("items", [])
-            for item in items[:3]:
-                title = re.sub(r"<[^>]+>","", item.get("title","")).strip()
-                if title and len(title) > 5:
-                    # 30자 이내로 truncate
-                    schedules.append(title[:28] + ("…" if len(title)>28 else ""))
-        except: pass
+        # ── 시도 2: 캘린더 HTML 직접 파싱 ──
+        if not entries:
+            try:
+                resp = requests.get("https://www.president.go.kr/president/calendar",
+                    headers={"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+                             "Accept":"text/html,application/xhtml+xml"},
+                    timeout=6)
+                if resp.status_code == 200:
+                    html = resp.text
+                    # data-date 속성에서 날짜, 인접 텍스트에서 제목 추출
+                    date_pat = re.compile(r'data-date=["\']([0-9]{4}-[0-9]{2}-[0-9]{2})["\']')
+                    tag_pat  = re.compile(r'<[^>]+>')
+                    chunks = re.split(r'(?=data-date=)', html)
+                    for chunk in chunks[:30]:
+                        dm = date_pat.search(chunk)
+                        if not dm: continue
+                        date_s = dm.group(1)
+                        try:
+                            ev_date = datetime.strptime(date_s, "%Y-%m-%d").date()
+                        except: continue
+                        if ev_date < today: continue
+                        # 이후 100자에서 태그 제거 후 텍스트 추출
+                        raw = tag_pat.sub("", chunk[:200]).strip()
+                        title = " ".join(raw.split())[:30]
+                        if title and len(title) > 2:
+                            entries.append((ev_date, title))
+                    # 월일 패턴 (예: 3월 7일 국무회의)
+                    for m2 in re.finditer(r'([0-9]{1,2})월\s*([0-9]{1,2})일[^<]{0,3}<[^>]+>([^<]{3,30})', html):
+                        try:
+                            ev_date = datetime(today.year, int(m2.group(1)), int(m2.group(2))).date()
+                            if ev_date >= today:
+                                title = m2.group(3).strip()[:25]
+                                if title: entries.append((ev_date, title))
+                        except: pass
+            except: pass
 
-    return schedules[:3]
+        # ── 시도 3: 네이버 뉴스 API fallback ──
+        if not entries:
+            try:
+                resp = requests.get("https://openapi.naver.com/v1/search/news.json",
+                    headers={"X-Naver-Client-Id": CLIENT_ID, "X-Naver-Client-Secret": CLIENT_SECRET},
+                    params={"query": "대통령 일정", "display": 6, "sort": "date"},
+                    timeout=4)
+                for item in resp.json().get("items", []):
+                    pub = item.get("pubDate","")
+                    try:
+                        from email.utils import parsedate_to_datetime
+                        pub_dt = parsedate_to_datetime(pub).date()
+                    except:
+                        pub_dt = today
+                    if pub_dt >= today:
+                        title = re.sub(r"<[^>]+>","", item.get("title","")).strip()
+                        if title:
+                            entries.append((pub_dt, title[:22]))
+            except: pass
+
+        # ── 정렬 + 1줄 포맷 ──
+        if not entries:
+            return ""
+        entries.sort(key=lambda x: x[0])
+        # 중복 제거
+        seen, unique = set(), []
+        for d, t in entries:
+            key = t[:10]
+            if key not in seen:
+                seen.add(key); unique.append((d, t))
+        parts = [
+            f"{ev.month}.{ev.day:02d} ▶ {title[:18]}{'…' if len(title)>18 else ''}"
+            for ev, title in unique[:3]
+        ]
+        return " / ".join(parts)
+
+    except:
+        return ""
 
 
 @st.cache_data(ttl=1800)
@@ -1432,11 +1507,10 @@ def get_market_data(custom_ticker=""):
         "sp500":"—","sp500_c":"","sp500_p":"","sp500_up":True,
         "usd_krw":"—","usd_c":"","usd_up":True,
         "oil":"—","oil_c":"","oil_up":True,
-        "bok_rate":"—",   # 한은 기준금리 (정적)
-        "pres_sched":"",  # 대통령 일정
+        "pres_sched":"",  # 대통령 일정 (1줄 문자열)
         "custom_name": custom_ticker,
         "custom_price":"—","custom_c":"","custom_up":True,
-        "updated": datetime.now().strftime("%Y.%m.%d %H:%M"),
+        "updated": (datetime.utcnow() + timedelta(hours=9)).strftime("%Y.%m.%d %H:%M"),
     }
     if YF_OK:
         tickers = {"^KS11":"kospi","^KQ11":"kosdaq","^IXIC":"nasdaq","^GSPC":"sp500",
@@ -1500,52 +1574,54 @@ def mhdr(d):
     sp500_row  = cell("S&P500", d["sp500"],  cs(d["sp500_c"]+" "+d["sp500_p"],  d["sp500_up"]))
     sep2 = "<div style='border-left:2px solid #ddd;height:30px;margin:0 10px;'></div>"
 
-    # 구독자 지정 회사 주가 (있을 때만)
-    custom_html = ""
-    cn = d.get("custom_name","").strip()
-    if cn and d.get("custom_price","—") != "—":
-        custom_html = (
-            sep2 +
-            f"<div style='margin-right:6px;font-size:8px;color:#7B1FA2;font-weight:700;'>📌 {cn}</div>" +
-            cell("실시간", d["custom_price"], cs(d["custom_c"], d["custom_up"]))
-        )
-
     # USD/KRW + 두바이유
     usd_row = cell("USD/KRW",   d["usd_krw"], cs(d["usd_c"], d["usd_up"]))
     oil_row = cell("두바이유($/bbl)", d["oil"], cs(d["oil_c"], d["oil_up"]))
 
-    # 금주 대통령 일정 (리스트 → 줄바꿈 표시)
-    pres_html = ""
-    pres_list = d.get("pres_sched", [])
-    if isinstance(pres_list, str) and pres_list:
-        pres_list = [pres_list]
-    if pres_list:
-        items_html = "".join(
-            f"<div style='font-size:9px;font-weight:600;color:#4A148C;"
-            f"white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
-            f"max-width:200px;'>{item[:30]}{"…" if len(item)>30 else ""}</div>"
-            for item in pres_list[:3]
+    # 구독자 지정 회사 주가 — 있으면 별도 섹션, 없으면 공간 자체 제거
+    cn = d.get("custom_name","").strip()
+    has_custom = bool(cn and d.get("custom_price","—") != "—")
+    if has_custom:
+        custom_section = (
+            sep2 +
+            "<div style='background:#F3E5F5;border-radius:4px;padding:4px 10px;margin-right:6px;'>"
+            f"<div style='font-size:8px;color:#7B1FA2;font-weight:700;'>📌 {cn}</div>"
+            f"<div style='font-size:13px;font-weight:800;color:#6A1B9A;'>{d['custom_price']}</div>"
+            f"<div>{cs(d['custom_c'], d['custom_up'])}</div>"
+            "</div>"
         )
+    else:
+        custom_section = ""
+
+    # 대통령 일정 (1줄 문자열, 없으면 공간 제거)
+    pres_html = ""
+    pres_str  = d.get("pres_sched", "")
+    if isinstance(pres_str, list):
+        pres_str = " / ".join(pres_str)
+    if pres_str:
         pres_html = (
-            "<div style='border-left:1px solid #ddd;padding-left:10px;margin-right:6px;'>"
-            "<div style='font-size:8px;color:#888;font-weight:700;margin-bottom:2px;'>🗓 금주 대통령 일정</div>"
-            + items_html +
+            "<div style='border-left:1px solid #ddd;padding-left:10px;margin-right:6px;"
+            "max-width:290px;flex-shrink:1;'>"
+            "<div style='font-size:8px;color:#888;font-weight:700;margin-bottom:1px;'>🗓 대통령 일정</div>"
+            f"<div style='font-size:9px;font-weight:600;color:#4A148C;"
+            f"white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'>{pres_str}</div>"
             "</div>"
         )
 
-    updated = f"<div style='margin-left:auto;font-size:8px;color:#ccc;'>{d['updated']}</div>"
+    updated = f"<div style='margin-left:auto;font-size:8px;color:#aaa;white-space:nowrap;'>{d['updated']}</div>"
 
+    # 레이아웃: 코스피/코스닥 | 나스닥/S&P | [회사주가(있을때)] | USD/두바이유 | [대통령일정] | 업데이트
     return (
         f"<div style='background:white;border:1px solid #ddd;border-radius:5px;"
         f"padding:7px 14px;margin-bottom:8px;display:flex;align-items:center;"
-        f"flex-wrap:wrap;gap:3px;font-family:{FONT_KR};'>"
+        f"flex-wrap:wrap;gap:4px;font-family:{FONT_KR};'>"
         + kospi_row + kosdaq_row
         + sep1
         + nasdaq_row + sp500_row
-        + custom_html
+        + custom_section      # 구독자 전용: 회사 주가
         + sep2
         + usd_row + oil_row
-        + pres_html
+        + pres_html           # 대통령 일정 (있을 때만)
         + updated
         + "</div>"
     )
@@ -1860,7 +1936,7 @@ def make_full_word(cd):
     p=doc.add_paragraph(); p.alignment=WD_ALIGN_PARAGRAPH.CENTER
     r=p.add_run("한국전력 언론보도 유형분석 보고서"); r.bold=True; r.font.size=Pt(18); r.font.color.rgb=RGBColor(0,51,102)
     p2=doc.add_paragraph(); p2.alignment=WD_ALIGN_PARAGRAPH.CENTER
-    p2.add_run(f"{label}  |  {period_str}  |  {datetime.now().strftime('%Y년 %m월 %d일')}")
+    p2.add_run(f"{label}  |  {period_str}  |  {(datetime.utcnow()+timedelta(hours=9)).strftime('%Y년 %m월 %d일')}")
     doc.add_paragraph()
     def hd(txt, lv=1):
         h=doc.add_heading(txt,level=lv); h.runs[0].font.color.rgb=RGBColor(0,51,102); return h
@@ -2508,14 +2584,14 @@ def render_report(cd):
         out=io.BytesIO()
         with pd.ExcelWriter(out,engine='openpyxl') as w: df.to_excel(w,index=False,sheet_name="데이터")
         out.seek(0)
-        st.download_button("📥 엑셀", data=out, file_name=f"한전뉴스_{label}_{datetime.now().strftime('%Y%m%d')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, key=f"xl_{label}")
+        st.download_button("📥 엑셀", data=out, file_name=f"한전뉴스_{label}_{(datetime.utcnow()+timedelta(hours=9)).strftime('%Y%m%d')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, key=f"xl_{label}")
     with dl2:
         wb2=make_full_word(cd)
-        st.download_button("📄 전체 보고서 워드", data=wb2, file_name=f"KEPCO_{label}_{datetime.now().strftime('%Y%m%d')}.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True, key=f"wd2_{label}")
+        st.download_button("📄 전체 보고서 워드", data=wb2, file_name=f"KEPCO_{label}_{(datetime.utcnow()+timedelta(hours=9)).strftime('%Y%m%d')}.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True, key=f"wd2_{label}")
     with dl3:
         components.html("""<button id="cpbtn" onclick="(function(){var u=window.parent.location.href;navigator.clipboard.writeText(u).then(function(){document.getElementById('cpbtn').innerText='✅ 복사됨!';document.getElementById('cpbtn').style.background='#2E7D32';setTimeout(function(){document.getElementById('cpbtn').innerText='🔗 링크 복사';document.getElementById('cpbtn').style.background='#003366';},2000);});})();" style="background:#003366;color:white;border:none;padding:8px 16px;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;width:100%;">🔗 링크 복사</button>""", height=40)
 
-    st.markdown(f"<div style='background:#003366;color:white;text-align:center;padding:7px;border-radius:4px;margin-top:10px;font-size:10px;opacity:.8;font-family:{FONT_KR};'>⚡ 키워드로 오늘의 뉴스 뜯어보기_by 글쓰는 여행자 | {datetime.now().strftime('%Y.%m.%d')} | 열독률: 언론진흥재단('23)</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='background:#003366;color:white;text-align:center;padding:7px;border-radius:4px;margin-top:10px;font-size:10px;opacity:.8;font-family:{FONT_KR};'>⚡ 키워드로 오늘의 뉴스 뜯어보기_by 글쓰는 여행자 | {(datetime.utcnow()+timedelta(hours=9)).strftime('%Y.%m.%d')} | 열독률: 언론진흥재단('23)</div>", unsafe_allow_html=True)
     st.markdown("---")
 
 # ══ APP ═══════════════════════════════════════════════
@@ -2545,7 +2621,7 @@ _custom_ticker = st.session_state.get("header_ticker", "")
 _custom_name   = st.session_state.get("header_company", "")
 md = get_market_data(custom_ticker=_custom_ticker)
 md["custom_name"] = _custom_name  # 표시명 덮어쓰기
-st.markdown(f"""<div style='background:#003366;color:white;padding:8px 16px;border-radius:5px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-family:{FONT_KR};'><span style='font-size:15px;font-weight:700;'>⚡ 키워드로 오늘의 뉴스 뜯어보기_by 글쓰는 여행자</span><span style='font-size:8px;opacity:.65;'>{datetime.now().strftime('%Y.%m.%d')} | 열독률 등급 기반 | 네이버 뉴스 API</span></div>""", unsafe_allow_html=True)
+st.markdown(f"""<div style='background:#003366;color:white;padding:8px 16px;border-radius:5px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-family:{FONT_KR};'><span style='font-size:15px;font-weight:700;'>⚡ 키워드로 오늘의 뉴스 뜯어보기_by 글쓰는 여행자</span><span style='font-size:8px;opacity:.65;'>{(datetime.utcnow()+timedelta(hours=9)).strftime('%Y.%m.%d')} | 열독률 등급 기반 | 네이버 뉴스 API</span></div>""", unsafe_allow_html=True)
 st.markdown(mhdr(md), unsafe_allow_html=True)
 
 with st.sidebar:
@@ -2658,7 +2734,7 @@ with st.sidebar:
                             "send_minute":    int(user_minute),
                             "company_name":   resolved_name,
                             "company_ticker": resolved_ticker,
-                            "joined_at":      datetime.now().strftime("%Y-%m-%d %H:%M"),
+                            "joined_at":      (datetime.utcnow()+timedelta(hours=9)).strftime("%Y-%m-%d %H:%M"),
                         })
                         fresh["subscribers"] = fresh_subs
                         save_sub(fresh); apply_scheduler(fresh)
