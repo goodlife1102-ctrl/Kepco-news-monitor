@@ -575,7 +575,256 @@ def save_sub(cfg):
         return False
 
 def build_email_html(arts, df, label, period_str):
-    """분석 결과를 HTML 이메일 본문으로 변환"""
+    """분석 결과 전체 레포트를 HTML 이메일로 변환"""
+    total = len(df)
+    if total == 0:
+        return "<p>수집된 기사가 없습니다.</p>"
+
+    cv = df["감성"].value_counts()
+    neg_n = int(cv.get("부정", 0)); pos_n = int(cv.get("긍정", 0)); neu_n = int(cv.get("중립", 0))
+    neg_rate = neg_n / total * 100; pos_rate = pos_n / total * 100
+    tone_color = "#C62828" if neg_n > pos_n*1.5 else "#1565C0" if pos_n > neg_n*1.5 else "#E65100"
+    tone_txt   = "부정 우세" if neg_n > pos_n*1.5 else "긍정 우세" if pos_n > neg_n*1.5 else "균형"
+
+    nk = extract_kws(arts, "부정", n=5)
+    pk = extract_kws(arts, "긍정", n=5)
+    neg_med = [m for m,_ in df[df["감성"]=="부정"]["매체"].value_counts().head(5).items()]
+    pr_s, pr_l, pr_c = calc_pr_risk(neg_n, total, nk, False, neg_med)
+    pr_l_kr = {"HIGH":"높음","MEDIUM":"보통","LOW":"낮음"}.get(pr_l, pr_l)
+    pr_bg   = "#FFEBEE" if pr_s>=70 else "#FFF3E0" if pr_s>=40 else "#E8F5E9"
+    now_str = datetime.now().strftime("%Y년 %m월 %d일 %H:%M")
+
+    # ── 00. 요약 서술 ──
+    neg_top1_kw = nk[0][0] if nk else "해당없음"
+    tnc = df[df["감성"]=="부정"]["카테고리"].value_counts().index[0] if neg_n>0 else "없음"
+    tpc = df[df["감성"]=="긍정"]["카테고리"].value_counts().index[0] if pos_n>0 else "없음"
+    summary_txt = (
+        f"<b>{period_str}</b> 네이버 기사 전체 <b>{total}건</b>을 전수 분석했습니다. "
+        f"기간 내 <b>부정 보도 {neg_rate:.0f}%</b>, 긍정 보도 {pos_rate:.0f}%로 "
+        f"{'부정 보도가 많은 위기 국면입니다' if tone_txt=='부정 우세' else '긍정 보도가 우세한 호의적 환경입니다' if tone_txt=='긍정 우세' else '균형 있는 언론 환경이 유지되고 있습니다'}. "
+        f"'{neg_top1_kw}' 키워드가 부정 보도의 핵심이며 언론 리스크는 <b>{pr_s}점({pr_l_kr})</b>입니다. "
+        f"위기관리 차원에서 선제적 대응과 '{tnc}' 이슈에 대한 공식 입장 발표가 권고됩니다. "
+        f"반면 '{tpc}'와 관련한 보도는 긍정적입니다."
+    )
+
+    # ── 01. 매체별 논조 테이블 ──
+    media_list = sorted(df["매체"].value_counts().head(15).index.tolist(), key=get_media_rank)
+    media_rows = ""
+    for mname in media_list:
+        gi = MEDIA_GRADE.get(mname,{}); grade=gi.get("grade",""); rate=gi.get("rate","")
+        gc = GRADE_COLOR.get(grade,"#999")
+        n_tot = int(df[df["매체"]==mname].shape[0])
+        n_neg = int(df[(df["매체"]==mname)&(df["감성"]=="부정")].shape[0])
+        n_pos = int(df[(df["매체"]==mname)&(df["감성"]=="긍정")].shape[0])
+        neg_pct = round(n_neg/n_tot*100) if n_tot>0 else 0
+        bar_neg = "■"*int(neg_pct/10) + "□"*(10-int(neg_pct/10))
+        media_rows += f"""<tr style='border-bottom:1px solid #f0f0f0;'>
+          <td style='padding:5px 8px;font-size:12px;'>
+            <span style='background:{gc};color:white;padding:1px 4px;border-radius:2px;font-size:9px;font-weight:700;margin-right:4px;'>{grade}</span>{mname}
+          </td>
+          <td style='padding:5px 8px;font-size:11px;color:#888;text-align:center;'>{rate}%</td>
+          <td style='padding:5px 8px;font-size:12px;font-weight:700;color:#C62828;text-align:center;'>{n_neg}</td>
+          <td style='padding:5px 8px;font-size:12px;font-weight:700;color:#1565C0;text-align:center;'>{n_pos}</td>
+          <td style='padding:5px 8px;font-size:12px;font-weight:700;color:#555;text-align:center;'>{n_tot}</td>
+          <td style='padding:5px 8px;font-size:9px;color:#C62828;'>{bar_neg}</td>
+        </tr>"""
+
+    # ── 02. 키워드 ──
+    neg_kw_html = " ".join([f"<span style='background:#FFEBEE;color:#C62828;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:700;margin:2px;display:inline-block;'>{k}({v})</span>" for k,v in nk[:5]])
+    pos_kw_html = " ".join([f"<span style='background:#E3F2FD;color:#1565C0;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:700;margin:2px;display:inline-block;'>{k}({v})</span>" for k,v in pk[:5]])
+
+    # ── 03. 매체×이슈 부정 보도율 ──
+    top_m = sorted(df["매체"].value_counts().head(8).index.tolist(), key=get_media_rank)
+    top_c = [c for c in TOPIC_GROUPS if c in df["카테고리"].values][:7]
+    heat_header = "<th style='padding:5px 6px;background:#003366;color:white;font-size:9px;font-weight:700;'>매체</th>" + \
+        "".join([f"<th style='padding:5px 4px;background:#003366;color:white;font-size:9px;font-weight:700;text-align:center;'>{c[:4]}</th>" for c in top_c])
+    heat_rows = ""
+    for mname in top_m:
+        cells = f"<td style='padding:5px 8px;font-size:11px;font-weight:700;'>{mname}</td>"
+        for cat in top_c:
+            nm = len(df[(df["매체"]==mname)&(df["카테고리"]==cat)])
+            nn = len(df[(df["매체"]==mname)&(df["카테고리"]==cat)&(df["감성"]=="부정")])
+            pct = round(nn/nm*100) if nm>0 else 0
+            bg = "#B71C1C" if pct>=70 else "#FFB74D" if pct>=40 else "#FFF9C4" if pct>0 else "#F9F9F9"
+            fg = "white" if pct>=70 else "#333"
+            cells += f"<td style='padding:5px 4px;font-size:10px;font-weight:700;text-align:center;background:{bg};color:{fg};'>{pct}%</td>" if nm>0 else "<td style='padding:5px 4px;font-size:10px;color:#ccc;text-align:center;'>—</td>"
+        heat_rows += f"<tr style='border-bottom:1px solid #eee;'>{cells}</tr>"
+
+    # ── 04. 비판 포인트 & 대응 전략 ──
+    criticisms = gen_criticisms(arts, label)
+    paired = gen_paired_insights(criticisms)
+    strategy_rows = ""
+    for i, item in enumerate(paired, 1):
+        c = item["criticism"]; db = item["db"]
+        dots_str = "●"*c["dots"] + "○"*(5-c["dots"])
+        pts = " / ".join(c["points"][:2])
+        strategy_rows += f"""<tr style='border-bottom:1px solid #f0f0f0;'>
+          <td style='padding:8px;font-size:12px;font-weight:700;color:#C62828;vertical-align:top;'>이슈{i}. {c['title']}<br><span style='font-size:10px;color:#C62828;letter-spacing:1px;'>{dots_str}</span><br><span style='font-size:10px;color:#888;font-weight:400;'>{pts}</span></td>
+          <td style='padding:8px;font-size:11px;color:#333;vertical-align:top;background:#F0F8FF;'>{db['action']}<br><br><span style='font-size:10px;color:#003366;font-weight:700;'>📌 {db['msg']}</span></td>
+        </tr>"""
+
+    # ── 05. 전체 기사 목록 ──
+    df_sorted = df.copy()
+    df_sorted["_r"] = df_sorted["매체"].apply(get_media_rank)
+    df_sorted = df_sorted.sort_values(["일자","_r"], ascending=[False,True]).reset_index(drop=True)
+
+    sent_icon = {"부정":"🔴","긍정":"🔵","중립":"🟡"}
+    article_rows = ""
+    for idx, row in df_sorted.iterrows():
+        gi2 = MEDIA_GRADE.get(row["매체"],{}); grade2=gi2.get("grade","")
+        gc2 = GRADE_COLOR.get(grade2,"#999")
+        icon = sent_icon.get(row["감성"],"⚪")
+        article_rows += f"""<tr style='border-bottom:1px solid #f5f5f5;{"background:#FFF8F8;" if row["감성"]=="부정" else "background:#F8FBFF;" if row["감성"]=="긍정" else ""}'>
+          <td style='padding:5px 6px;font-size:10px;color:#aaa;text-align:center;'>{idx+1}</td>
+          <td style='padding:5px 6px;font-size:10px;color:#888;white-space:nowrap;'>{row['일자']}</td>
+          <td style='padding:5px 6px;font-size:11px;white-space:nowrap;'>
+            <span style='background:{gc2};color:white;padding:1px 3px;border-radius:2px;font-size:8px;font-weight:700;margin-right:2px;'>{grade2}</span>{row['매체']}
+          </td>
+          <td style='padding:5px 6px;font-size:12px;'>
+            <a href='{row["링크"]}' style='color:#003366;text-decoration:none;'>{row['헤드라인']}</a>
+          </td>
+          <td style='padding:5px 6px;font-size:11px;color:#888;'>{row.get('카테고리','—')}</td>
+          <td style='padding:5px 6px;font-size:14px;text-align:center;'>{icon}</td>
+        </tr>"""
+
+    html = f"""<!DOCTYPE html>
+<html><head><meta charset='utf-8'>
+<style>
+  body {{ font-family:'Malgun Gothic','Apple SD Gothic Neo',Arial,sans-serif; margin:0; padding:0; background:#f0f2f5; }}
+  .wrap {{ max-width:800px; margin:20px auto; background:white; border-radius:8px; overflow:hidden; box-shadow:0 2px 12px rgba(0,0,0,.12); }}
+  table {{ width:100%; border-collapse:collapse; }}
+  .sec {{ margin-bottom:0; padding:18px 24px; border-bottom:1px solid #eee; }}
+  .sec-title {{ font-size:14px; font-weight:800; color:#003366; border-left:4px solid #003366; padding-left:10px; margin-bottom:12px; }}
+</style></head><body>
+<div class='wrap'>
+
+  <!-- 헤더 -->
+  <div style='background:#003366;color:white;padding:20px 24px;'>
+    <div style='font-size:20px;font-weight:800;'>⚡ {label} 언론보도 유형분석 리포트</div>
+    <div style='font-size:11px;opacity:.75;margin-top:5px;'>{period_str} | {now_str} 자동 발송 | 뉴스 모니터링 및 유형분석 시스템_by KEPCO</div>
+  </div>
+
+  <!-- KPI 카드 -->
+  <div style='padding:18px 24px;border-bottom:1px solid #eee;'>
+    <table style='table-layout:fixed;'>
+      <tr>
+        <td style='text-align:center;padding:10px;background:#F4F6F9;border-radius:6px;border-top:3px solid #003366;'>
+          <div style='font-size:24px;font-weight:800;color:#003366;'>{total}</div>
+          <div style='font-size:10px;color:#888;margin-top:2px;'>총 기사</div>
+        </td>
+        <td style='width:8px;'></td>
+        <td style='text-align:center;padding:10px;background:#FFF8F8;border-radius:6px;border-top:3px solid #C62828;'>
+          <div style='font-size:24px;font-weight:800;color:#C62828;'>{neg_n}</div>
+          <div style='font-size:10px;color:#888;margin-top:2px;'>부정 ({neg_rate:.0f}%)</div>
+        </td>
+        <td style='width:8px;'></td>
+        <td style='text-align:center;padding:10px;background:#F0F8FF;border-radius:6px;border-top:3px solid #1565C0;'>
+          <div style='font-size:24px;font-weight:800;color:#1565C0;'>{pos_n}</div>
+          <div style='font-size:10px;color:#888;margin-top:2px;'>긍정 ({pos_rate:.0f}%)</div>
+        </td>
+        <td style='width:8px;'></td>
+        <td style='text-align:center;padding:10px;background:#F5F5F5;border-radius:6px;border-top:3px solid #888;'>
+          <div style='font-size:24px;font-weight:800;color:#555;'>{neu_n}</div>
+          <div style='font-size:10px;color:#888;margin-top:2px;'>중립</div>
+        </td>
+        <td style='width:8px;'></td>
+        <td style='text-align:center;padding:10px;background:{pr_bg};border-radius:6px;border-top:3px solid {pr_c};'>
+          <div style='font-size:24px;font-weight:800;color:{pr_c};'>{pr_s}점</div>
+          <div style='font-size:10px;color:#888;margin-top:2px;'>PR리스크({pr_l_kr})</div>
+        </td>
+        <td style='width:8px;'></td>
+        <td style='text-align:center;padding:10px;background:#F4F6F9;border-radius:6px;border-top:3px solid {tone_color};'>
+          <div style='font-size:20px;font-weight:800;color:{tone_color};'>{"🔴" if tone_txt=="부정 우세" else "🔵" if tone_txt=="긍정 우세" else "🟡"}</div>
+          <div style='font-size:10px;color:#888;margin-top:2px;'>{tone_txt}</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- 00. 종합 결론 -->
+  <div class='sec'>
+    <div class='sec-title'>00 · 종합 결론 및 제언</div>
+    <div style='font-size:13px;line-height:1.9;color:#333;background:#F8F9FA;padding:14px 16px;border-left:3px solid #003366;border-radius:0 4px 4px 0;'>{summary_txt}</div>
+  </div>
+
+  <!-- 01. 키워드 -->
+  <div class='sec'>
+    <div class='sec-title'>01 · 논조별 주요 키워드</div>
+    <div style='margin-bottom:10px;'>
+      <div style='font-size:11px;font-weight:800;color:#C62828;margin-bottom:5px;'>🔴 부정 키워드 TOP5</div>
+      <div>{neg_kw_html if neg_kw_html else '<span style="color:#aaa;font-size:11px;">없음</span>'}</div>
+    </div>
+    <div>
+      <div style='font-size:11px;font-weight:800;color:#1565C0;margin-bottom:5px;'>🔵 긍정 키워드 TOP5</div>
+      <div>{pos_kw_html if pos_kw_html else '<span style="color:#aaa;font-size:11px;">없음</span>'}</div>
+    </div>
+  </div>
+
+  <!-- 02. 매체별 논조 -->
+  <div class='sec'>
+    <div class='sec-title'>02 · 매체별 논조 분석</div>
+    <table>
+      <thead><tr style='background:#003366;color:white;font-size:10px;'>
+        <th style='padding:6px 8px;text-align:left;'>매체</th>
+        <th style='padding:6px 8px;text-align:center;'>열독률</th>
+        <th style='padding:6px 8px;text-align:center;'>부정</th>
+        <th style='padding:6px 8px;text-align:center;'>긍정</th>
+        <th style='padding:6px 8px;text-align:center;'>전체</th>
+        <th style='padding:6px 8px;text-align:left;'>부정비중</th>
+      </tr></thead>
+      <tbody>{media_rows}</tbody>
+    </table>
+  </div>
+
+  <!-- 03. 매체×이슈 부정 보도율 -->
+  <div class='sec'>
+    <div class='sec-title'>03 · 매체×이슈 부정 보도율</div>
+    <table>
+      <thead><tr>{heat_header}</tr></thead>
+      <tbody>{heat_rows}</tbody>
+    </table>
+    <div style='font-size:10px;color:#aaa;margin-top:6px;'>■ 진한 빨강(70%↑) ■ 주황(40~70%) ■ 노랑(1~40%) □ 없음</div>
+  </div>
+
+  <!-- 04. 비판 포인트 & 대응 전략 -->
+  <div class='sec'>
+    <div class='sec-title'>04 · 비판 포인트 & 대응 전략</div>
+    <table>
+      <thead><tr style='background:#003366;color:white;font-size:10px;'>
+        <th style='padding:6px 8px;text-align:left;width:40%;'>🔴 현재 문제점 (As-Is)</th>
+        <th style='padding:6px 8px;text-align:left;width:60%;'>✅ 개선 방향 (To-Be)</th>
+      </tr></thead>
+      <tbody>{strategy_rows}</tbody>
+    </table>
+  </div>
+
+  <!-- 05. 전체 기사 목록 -->
+  <div class='sec'>
+    <div class='sec-title'>05 · 전체 기사 목록 ({total}건)</div>
+    <table>
+      <thead><tr style='background:#003366;color:white;font-size:10px;'>
+        <th style='padding:5px 6px;text-align:center;'>No.</th>
+        <th style='padding:5px 6px;'>일자</th>
+        <th style='padding:5px 6px;'>매체</th>
+        <th style='padding:5px 6px;'>헤드라인</th>
+        <th style='padding:5px 6px;'>카테고리</th>
+        <th style='padding:5px 6px;text-align:center;'>논조</th>
+      </tr></thead>
+      <tbody>{article_rows}</tbody>
+    </table>
+  </div>
+
+  <!-- 푸터 -->
+  <div style='background:#f8f8f8;padding:14px 24px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;'>
+    ⚡ 뉴스 모니터링 및 유형분석 시스템_by KEPCO &nbsp;|&nbsp; 네이버 뉴스 API 기반 자동 분석 &nbsp;|&nbsp; 열독률: 언론진흥재단('23)<br>
+    본 메일은 구독 설정에 따라 자동 발송되었습니다. 수신을 원하지 않으면 앱에서 구독을 해제해 주세요.
+  </div>
+</div>
+</body></html>"""
+    return html
+
+
+
     total = len(df)
     if total == 0:
         return "<p>수집된 기사가 없습니다.</p>"
@@ -755,7 +1004,9 @@ def send_email_report(cfg):
         html_body = build_email_html(arts, df, label, period_str)
 
         # SMTP 발송
-        recipients = [r.strip() for r in cfg["recipients"].split(",") if r.strip()]
+        # 줄바꿈(\n)과 쉼표 모두 구분자로 처리
+        raw_recipients = cfg["recipients"].replace("\n", ",").replace("\r", "")
+        recipients = [r.strip() for r in raw_recipients.split(",") if r.strip()]
         if not recipients:
             return False, "수신자 이메일 없음"
 
