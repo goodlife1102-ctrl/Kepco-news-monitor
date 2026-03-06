@@ -1312,22 +1312,28 @@ def render_report(cd):
         st.plotly_chart(fig_radar, use_container_width=True, config=cfg())
 
     with detail_col:
-        st.markdown(f"<div style='font-size:12px;font-weight:800;color:#003366;margin-bottom:10px;margin-top:10px;font-family:{FONT_KR};'>카테고리별 비판 강도 순위</div>", unsafe_allow_html=True)
         visible = [(cat, val) for cat, val in cat_neg_sorted[:6] if val > 0]
+        # 레이더 차트와 동일한 높이(360px) flexbox로 항목 균등 배분
+        rows_html = ""
         for rank_i, (cat, val) in enumerate(visible, 1):
             score = round(val/max_v*5, 1)
             bar_w = int(score/5*100)
             num_circle = ["①","②","③","④","⑤","⑥"][rank_i-1]
-            # 행 높이를 균등하게: 전체 6개 기준으로 여백 계산
-            row_mb = "margin-bottom:14px;" if len(visible) <= 4 else "margin-bottom:8px;"
-            st.markdown(f"""<div style='display:flex;align-items:center;gap:10px;{row_mb}font-family:{FONT_KR};'>
-  <span style='font-size:16px;font-weight:800;color:#C62828;min-width:26px;'>{num_circle}</span>
-  <div style='flex:1;'>
-    <div style='display:flex;justify-content:space-between;margin-bottom:4px;'>
+            rows_html += f"""<div style='display:flex;align-items:center;gap:10px;font-family:{FONT_KR};'>
+  <span style='font-size:16px;font-weight:800;color:#C62828;min-width:26px;flex-shrink:0;'>{num_circle}</span>
+  <div style='flex:1;min-width:0;'>
+    <div style='display:flex;justify-content:space-between;margin-bottom:5px;'>
       <span style='font-size:12px;font-weight:700;color:#333;'>{cat}</span>
-      <span style='font-size:12px;font-weight:700;color:#C62828;'>{score}/5점 ({val}건)</span>
+      <span style='font-size:12px;font-weight:700;color:#C62828;white-space:nowrap;margin-left:8px;'>{score}/5점 ({val}건)</span>
     </div>
     <div style='background:#f5f5f5;border-radius:4px;height:8px;'><div style='background:#C62828;width:{bar_w}%;height:8px;border-radius:4px;'></div></div>
+  </div>
+</div>"""
+
+        st.markdown(f"""<div style='height:360px;display:flex;flex-direction:column;justify-content:space-between;padding:10px 0;'>
+  <div style='font-size:12px;font-weight:800;color:#003366;font-family:{FONT_KR};padding-bottom:4px;border-bottom:1px solid #eee;'>카테고리별 비판 강도 순위</div>
+  <div style='display:flex;flex-direction:column;justify-content:space-evenly;flex:1;padding-top:6px;'>
+    {rows_html.replace(chr(10), "")}
   </div>
 </div>""", unsafe_allow_html=True)
 
