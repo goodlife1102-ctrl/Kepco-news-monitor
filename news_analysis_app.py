@@ -629,7 +629,22 @@ def build_email_html(arts, df, label, period_str):
           <td style='padding:5px 8px;font-size:9px;color:#C62828;'>{bar_neg}</td>
         </tr>"""
 
-    # ── 02. 키워드 ──
+    # ── 02. 키워드 워드클라우드 (순수 HTML — 이메일 호환) ──
+    all_kws = []
+    if nk:
+        max_neg = nk[0][1] if nk else 1
+        for k, v in nk[:12]:
+            size = max(13, min(30, int(13 + (v / max_neg) * 18)))
+            all_kws.append(f"<span style='font-size:{size}px;font-weight:700;color:#C62828;background:#FFEBEE;padding:4px 10px;border-radius:20px;margin:4px;display:inline-block;line-height:1.4;'>{k}<span style='font-size:9px;opacity:.7;margin-left:3px;'>({v})</span></span>")
+    if pk:
+        max_pos = pk[0][1] if pk else 1
+        for k, v in pk[:8]:
+            size = max(12, min(26, int(12 + (v / max_pos) * 15)))
+            all_kws.append(f"<span style='font-size:{size}px;font-weight:700;color:#1565C0;background:#E3F2FD;padding:4px 10px;border-radius:20px;margin:4px;display:inline-block;line-height:1.4;'>{k}<span style='font-size:9px;opacity:.7;margin-left:3px;'>({v})</span></span>")
+    # 중심어 (검색 키워드)
+    center_kw_html = f"<span style='font-size:28px;font-weight:900;color:#003366;background:#EEF2FF;padding:6px 16px;border-radius:24px;margin:4px;display:inline-block;line-height:1.4;'>⚡ {label}</span>"
+    wordcloud_html = center_kw_html + " " + " ".join(all_kws)
+
     neg_kw_html = " ".join([f"<span style='background:#FFEBEE;color:#C62828;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:700;margin:2px;display:inline-block;'>{k}({v})</span>" for k,v in nk[:5]])
     pos_kw_html = " ".join([f"<span style='background:#E3F2FD;color:#1565C0;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:700;margin:2px;display:inline-block;'>{k}({v})</span>" for k,v in pk[:5]])
 
@@ -670,7 +685,8 @@ def build_email_html(arts, df, label, period_str):
 
     sent_icon = {"부정":"🔴","긍정":"🔵","중립":"🟡"}
     article_rows = ""
-    for idx, row in df_sorted.iterrows():
+    show_n = 10
+    for idx, row in df_sorted.head(show_n).iterrows():
         gi2 = MEDIA_GRADE.get(row["매체"],{}); grade2=gi2.get("grade","")
         gc2 = GRADE_COLOR.get(grade2,"#999")
         icon = sent_icon.get(row["감성"],"⚪")
@@ -685,6 +701,16 @@ def build_email_html(arts, df, label, period_str):
           </td>
           <td style='padding:5px 6px;font-size:11px;color:#888;'>{row.get('카테고리','—')}</td>
           <td style='padding:5px 6px;font-size:14px;text-align:center;'>{icon}</td>
+        </tr>"""
+
+    remain = total - show_n
+    more_row = ""
+    if remain > 0:
+        more_row = f"""<tr>
+          <td colspan='6' style='text-align:center;padding:14px;background:#F4F6F9;'>
+            <span style='font-size:12px;color:#888;'>10건만 표시 중 &nbsp;|&nbsp; 나머지 <b style='color:#003366;'>{remain}건</b>은 앱에서 확인하세요</span><br>
+            <span style='display:inline-block;margin-top:8px;background:#003366;color:white;padding:7px 20px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:.3px;'>⚡ 전체 기사 {total}건 앱에서 보기 →</span>
+          </td>
         </tr>"""
 
     html = f"""<!DOCTYPE html>
@@ -749,19 +775,19 @@ def build_email_html(arts, df, label, period_str):
 
   <!-- 01. 키워드 -->
   <div class='sec'>
-    <div class='sec-title'>01 · 논조별 주요 키워드</div>
-    <div style='margin-bottom:10px;'>
-      <div style='font-size:11px;font-weight:800;color:#C62828;margin-bottom:5px;'>🔴 부정 키워드 TOP5</div>
-      <div>{neg_kw_html if neg_kw_html else '<span style="color:#aaa;font-size:11px;">없음</span>'}</div>
+    <div class='sec-title'>01 · 키워드 워드클라우드</div>
+    <div style='text-align:center;padding:16px 8px;background:#FAFBFC;border-radius:6px;line-height:2.2;'>
+      {wordcloud_html}
     </div>
-    <div>
-      <div style='font-size:11px;font-weight:800;color:#1565C0;margin-bottom:5px;'>🔵 긍정 키워드 TOP5</div>
-      <div>{pos_kw_html if pos_kw_html else '<span style="color:#aaa;font-size:11px;">없음</span>'}</div>
+    <div style='margin-top:10px;font-size:10px;color:#aaa;'>
+      <span style='color:#C62828;font-weight:700;'>■ 빨강</span> 부정 키워드 &nbsp;
+      <span style='color:#1565C0;font-weight:700;'>■ 파랑</span> 긍정 키워드 &nbsp;
+      <span style='color:#003366;font-weight:700;'>■ 남색</span> 검색 키워드 &nbsp;
+      글자 크기 = 언급 빈도
     </div>
   </div>
 
-  <!-- 02. 매체별 논조 -->
-  <div class='sec'>
+  <!-- 02. 매체별 논조 -->\n  <div class='sec'>
     <div class='sec-title'>02 · 매체별 논조 분석</div>
     <table>
       <thead><tr style='background:#003366;color:white;font-size:10px;'>
@@ -800,7 +826,7 @@ def build_email_html(arts, df, label, period_str):
 
   <!-- 05. 전체 기사 목록 -->
   <div class='sec'>
-    <div class='sec-title'>05 · 전체 기사 목록 ({total}건)</div>
+    <div class='sec-title'>05 · 기사 목록 (상위 {min(show_n, total)}건 / 전체 {total}건)</div>
     <table>
       <thead><tr style='background:#003366;color:white;font-size:10px;'>
         <th style='padding:5px 6px;text-align:center;'>No.</th>
@@ -810,7 +836,7 @@ def build_email_html(arts, df, label, period_str):
         <th style='padding:5px 6px;'>카테고리</th>
         <th style='padding:5px 6px;text-align:center;'>논조</th>
       </tr></thead>
-      <tbody>{article_rows}</tbody>
+      <tbody>{article_rows}{more_row}</tbody>
     </table>
   </div>
 
