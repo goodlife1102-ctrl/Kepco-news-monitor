@@ -1326,45 +1326,162 @@ def apply_scheduler(cfg):
 
 # ── 시장 데이터 ───────────────────────────────────────
 @st.cache_data(ttl=1800)
-def get_market_data():
-    d={"kospi":"—","kospi_c":"","kospi_p":"","kospi_up":True,"kosdaq":"—","kosdaq_c":"","kosdaq_p":"","kosdaq_up":True,"kepco_k":"—","kepco_kc":"","kepco_k_up":True,"kepco_u":"—","kepco_uc":"","kepco_u_up":True,"usd_krw":"—","usd_c":"","usd_up":True,"oil":"—","oil_c":"","oil_up":True,"smp_avg":"—","smp_h":"—","smp_l":"—","updated":datetime.now().strftime("%Y.%m.%d %H:%M")}
+def get_market_data(custom_ticker=""):
+    d = {
+        "kospi":"—","kospi_c":"","kospi_p":"","kospi_up":True,
+        "kosdaq":"—","kosdaq_c":"","kosdaq_p":"","kosdaq_up":True,
+        "nasdaq":"—","nasdaq_c":"","nasdaq_p":"","nasdaq_up":True,
+        "sp500":"—","sp500_c":"","sp500_p":"","sp500_up":True,
+        "usd_krw":"—","usd_c":"","usd_up":True,
+        "oil":"—","oil_c":"","oil_up":True,
+        "bok_rate":"—",   # 한은 기준금리 (정적)
+        "pres_sched":"",  # 대통령 일정
+        "custom_name": custom_ticker,
+        "custom_price":"—","custom_c":"","custom_up":True,
+        "updated": datetime.now().strftime("%Y.%m.%d %H:%M"),
+    }
     if YF_OK:
-        for sym,key in {"^KS11":"kospi","^KQ11":"kosdaq","015760.KS":"kepco_k","KEP":"kepco_u","USDKRW=X":"usd","BZ=F":"oil"}.items():
+        tickers = {"^KS11":"kospi","^KQ11":"kosdaq","^IXIC":"nasdaq","^GSPC":"sp500",
+                   "USDKRW=X":"usd","BZ=F":"oil"}
+        if custom_ticker:
+            tickers[custom_ticker] = "custom"
+        for sym, key in tickers.items():
             try:
-                h=yf.Ticker(sym).history(period="2d")
+                h = yf.Ticker(sym).history(period="2d")
                 if h.empty: continue
-                cur=float(h["Close"].iloc[-1]); prev=float(h["Close"].iloc[-2]) if len(h)>=2 else cur
-                chg=cur-prev; pct=chg/prev*100 if prev else 0
-                arr="▲" if chg>=0 else "▼"; up=(chg>=0)
-                if key=="kospi": d.update({"kospi":f"{cur:,.2f}","kospi_c":f"{arr}{abs(chg):,.2f}","kospi_p":f"{pct:+.2f}%","kospi_up":up})
-                elif key=="kosdaq": d.update({"kosdaq":f"{cur:,.2f}","kosdaq_c":f"{arr}{abs(chg):,.2f}","kosdaq_p":f"{pct:+.2f}%","kosdaq_up":up})
-                elif key=="kepco_k": d.update({"kepco_k":f"{cur:,}원","kepco_kc":f"{arr}{abs(chg):,.0f}","kepco_k_up":up})
-                elif key=="kepco_u": d.update({"kepco_u":f"{cur:.2f}USD","kepco_uc":f"{arr}{abs(chg):.2f}","kepco_u_up":up})
-                elif key=="usd": d.update({"usd_krw":f"{cur:,.2f}","usd_c":f"{arr}{abs(chg):,.2f}","usd_up":up})
-                elif key=="oil": d.update({"oil":f"{cur:.2f}","oil_c":f"{arr}{abs(chg):.2f}","oil_up":up})
+                cur  = float(h["Close"].iloc[-1])
+                prev = float(h["Close"].iloc[-2]) if len(h) >= 2 else cur
+                chg  = cur - prev; pct = chg/prev*100 if prev else 0
+                arr  = "▲" if chg >= 0 else "▼"; up = (chg >= 0)
+                if key == "kospi":
+                    d.update({"kospi":f"{cur:,.2f}","kospi_c":f"{arr}{abs(chg):,.2f}","kospi_p":f"{pct:+.2f}%","kospi_up":up})
+                elif key == "kosdaq":
+                    d.update({"kosdaq":f"{cur:,.2f}","kosdaq_c":f"{arr}{abs(chg):,.2f}","kosdaq_p":f"{pct:+.2f}%","kosdaq_up":up})
+                elif key == "nasdaq":
+                    d.update({"nasdaq":f"{cur:,.2f}","nasdaq_c":f"{arr}{abs(chg):,.2f}","nasdaq_p":f"{pct:+.2f}%","nasdaq_up":up})
+                elif key == "sp500":
+                    d.update({"sp500":f"{cur:,.2f}","sp500_c":f"{arr}{abs(chg):,.2f}","sp500_p":f"{pct:+.2f}%","sp500_up":up})
+                elif key == "usd":
+                    d.update({"usd_krw":f"{cur:,.2f}","usd_c":f"{arr}{abs(chg):,.2f}","usd_up":up})
+                elif key == "oil":
+                    d.update({"oil":f"{cur:.2f}","oil_c":f"{arr}{abs(chg):.2f}","oil_up":up})
+                elif key == "custom":
+                    # 국내주(KS/KQ) → 원화, 해외 → USD
+                    if sym.endswith(".KS") or sym.endswith(".KQ"):
+                        price_str = f"{cur:,.0f}원"
+                        chg_str   = f"{arr}{abs(chg):,.0f}"
+                    else:
+                        price_str = f"{cur:,.2f}"
+                        chg_str   = f"{arr}{abs(chg):,.2f}"
+                    d.update({"custom_price": price_str,"custom_c": chg_str,"custom_up": up})
             except: pass
+
+    # 한은 기준금리 — 변동 적을 때 수동 갱신용 (ECOS API 또는 하드코딩)
     try:
-        r=requests.get("https://new.kpx.or.kr/powerSource/getSmpCurrentDay.do",headers={"User-Agent":"Mozilla/5.0","Referer":"https://new.kpx.or.kr/"},params={"area":"1","yyyymmdd":datetime.now().strftime("%Y%m%d")},timeout=5)
-        if r.status_code==200:
-            vals=[float(x.get("smp",0)) for x in (r.json().get("list",[]) or r.json().get("data",[])) if x.get("smp")]
-            if vals: d.update({"smp_avg":f"{sum(vals)/len(vals):.2f}","smp_h":f"{max(vals):.2f}","smp_l":f"{min(vals):.2f}"})
-    except: pass
+        r = requests.get(
+            "https://ecos.bok.or.kr/api/StatisticSearch/sample/json/kr/1/1/722Y001/D/"
+            + (datetime.now()-timedelta(days=7)).strftime("%Y%m%d")
+            + "/" + datetime.now().strftime("%Y%m%d")
+            + "/0101000",
+            timeout=4
+        )
+        rows = r.json().get("StatisticSearch",{}).get("row",[])
+        if rows:
+            d["bok_rate"] = str(rows[-1].get("DATA_VALUE","—")) + "%"
+    except:
+        d["bok_rate"] = "3.00%"   # fallback: 최근 기준금리
+
+    # 대통령 일정 — 청와대/대통령실 RSS 파싱
+    try:
+        rss = requests.get(
+            "https://www.president.go.kr/rss/schedule",
+            headers={"User-Agent":"Mozilla/5.0"},
+            timeout=4
+        )
+        titles = re.findall(r"<title><!\[CDATA\[(.*?)\]\]></title>", rss.text)
+        if not titles:
+            titles = re.findall(r"<title>(.*?)</title>", rss.text)
+        today_str = datetime.now().strftime("%Y.%m.%d")
+        today_items = [t.strip() for t in titles[1:4] if t.strip() and "대통령" not in t[:2]]
+        d["pres_sched"] = " · ".join(today_items[:2]) if today_items else ""
+    except:
+        d["pres_sched"] = ""
+
     return d
 
 def mhdr(d):
-    def cs(v,up): c="#C62828" if up else "#1565C0"; return f"<span style='color:{c};font-size:10px;font-weight:600;'>{v}</span>"
-    smp="" if d["smp_avg"]=="—" else f"<div style='border-left:1px solid #ddd;padding-left:10px;margin-left:8px;'><div style='font-size:8px;color:#888;font-weight:700;'>SMP육지</div><div style='font-size:12px;font-weight:700;color:#003366;'>{d['smp_avg']}</div><div style='font-size:8px;color:#777;'>고{d['smp_h']}/저{d['smp_l']}</div></div>"
-    return f"""<div style='background:white;border:1px solid #ddd;border-radius:5px;padding:7px 14px;margin-bottom:8px;display:flex;align-items:center;flex-wrap:wrap;gap:3px;font-family:{FONT_KR};'>
-<div style='margin-right:10px;'><div style='font-size:8px;color:#888;font-weight:700;'>코스피</div><div style='font-size:13px;font-weight:700;color:#003366;'>{d['kospi']}</div><div>{cs(d['kospi_c']+" "+d['kospi_p'],d['kospi_up'])}</div></div>
-<div style='margin-right:12px;border-left:1px solid #eee;padding-left:10px;'><div style='font-size:8px;color:#888;font-weight:700;'>코스닥</div><div style='font-size:13px;font-weight:700;color:#003366;'>{d['kosdaq']}</div><div>{cs(d['kosdaq_c']+" "+d['kosdaq_p'],d['kosdaq_up'])}</div></div>
-<div style='border-left:2px solid #003366;height:30px;margin:0 10px;'></div>
-<div style='margin-right:4px;font-size:8px;color:#003366;font-weight:700;'>⚡ KEPCO</div>
-<div style='margin-right:10px;'><div style='font-size:8px;color:#888;'>KOSPI</div><div style='font-size:12px;font-weight:700;color:#003366;'>{d['kepco_k']}</div><div>{cs(d['kepco_kc'],d['kepco_k_up'])}</div></div>
-<div style='margin-right:12px;border-left:1px solid #eee;padding-left:10px;'><div style='font-size:8px;color:#888;'>NYSE</div><div style='font-size:12px;font-weight:700;color:#003366;'>{d['kepco_u']}</div><div>{cs(d['kepco_uc'],d['kepco_u_up'])}</div></div>
-<div style='border-left:2px solid #ddd;height:30px;margin:0 10px;'></div>
-<div style='margin-right:10px;'><div style='font-size:8px;color:#888;font-weight:700;'>USD/KRW</div><div style='font-size:12px;font-weight:700;color:#333;'>{d['usd_krw']}</div><div>{cs(d['usd_c'],d['usd_up'])}</div></div>
-<div style='border-left:1px solid #eee;padding-left:10px;margin-right:10px;'><div style='font-size:8px;color:#888;font-weight:700;'>두바이유($/bbl)</div><div style='font-size:12px;font-weight:700;color:#333;'>{d['oil']}</div><div>{cs(d['oil_c'],d['oil_up'])}</div></div>
-{smp}<div style='margin-left:auto;font-size:8px;color:#ccc;'>{d['updated']}</div></div>"""
+    def cs(v, up):
+        c = "#C62828" if up else "#1565C0"
+        return f"<span style='color:{c};font-size:10px;font-weight:600;'>{v}</span>"
+
+    def cell(label, val, chg_html, border_left=True):
+        bl = "border-left:1px solid #eee;padding-left:10px;" if border_left else ""
+        return (f"<div style='margin-right:10px;{bl}'>"
+                f"<div style='font-size:8px;color:#888;font-weight:700;'>{label}</div>"
+                f"<div style='font-size:12px;font-weight:700;color:#003366;'>{val}</div>"
+                f"<div>{chg_html}</div></div>")
+
+    # 코스피 / 코스닥
+    kospi_row  = cell("코스피",  d["kospi"],  cs(d["kospi_c"]+" "+d["kospi_p"],  d["kospi_up"]),  border_left=False)
+    kosdaq_row = cell("코스닥",  d["kosdaq"], cs(d["kosdaq_c"]+" "+d["kosdaq_p"], d["kosdaq_up"]))
+    sep1 = "<div style='border-left:2px solid #003366;height:30px;margin:0 10px;'></div>"
+
+    # 나스닥 / S&P500
+    nasdaq_row = cell("나스닥",  d["nasdaq"], cs(d["nasdaq_c"]+" "+d["nasdaq_p"], d["nasdaq_up"]))
+    sp500_row  = cell("S&P500", d["sp500"],  cs(d["sp500_c"]+" "+d["sp500_p"],  d["sp500_up"]))
+    sep2 = "<div style='border-left:2px solid #ddd;height:30px;margin:0 10px;'></div>"
+
+    # 구독자 지정 회사 주가 (있을 때만)
+    custom_html = ""
+    cn = d.get("custom_name","").strip()
+    if cn and d.get("custom_price","—") != "—":
+        custom_html = (
+            sep2 +
+            f"<div style='margin-right:6px;font-size:8px;color:#7B1FA2;font-weight:700;'>📌 {cn}</div>" +
+            cell("실시간", d["custom_price"], cs(d["custom_c"], d["custom_up"]))
+        )
+
+    # USD/KRW + 두바이유
+    usd_row = cell("USD/KRW",   d["usd_krw"], cs(d["usd_c"], d["usd_up"]))
+    oil_row = cell("두바이유($/bbl)", d["oil"], cs(d["oil_c"], d["oil_up"]))
+
+    # 한은 기준금리
+    bok_html = (
+        "<div style='border-left:1px solid #ddd;padding-left:10px;margin-right:10px;'>"
+        "<div style='font-size:8px;color:#888;font-weight:700;'>한은 기준금리</div>"
+        f"<div style='font-size:13px;font-weight:800;color:#1B5E20;'>{d['bok_rate']}</div>"
+        "<div style='font-size:8px;color:#aaa;'>기준금리(연)</div></div>"
+    )
+
+    # 대통령 일정 (있을 때만)
+    pres_html = ""
+    if d.get("pres_sched",""):
+        pres_html = (
+            "<div style='border-left:1px solid #ddd;padding-left:10px;margin-right:6px;"
+            "max-width:180px;overflow:hidden;'>"
+            "<div style='font-size:8px;color:#888;font-weight:700;'>대통령 일정</div>"
+            f"<div style='font-size:9px;font-weight:600;color:#4A148C;"
+            f"white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'>"
+            f"{d['pres_sched']}</div></div>"
+        )
+
+    updated = f"<div style='margin-left:auto;font-size:8px;color:#ccc;'>{d['updated']}</div>"
+
+    return (
+        f"<div style='background:white;border:1px solid #ddd;border-radius:5px;"
+        f"padding:7px 14px;margin-bottom:8px;display:flex;align-items:center;"
+        f"flex-wrap:wrap;gap:3px;font-family:{FONT_KR};'>"
+        + kospi_row + kosdaq_row
+        + sep1
+        + nasdaq_row + sp500_row
+        + custom_html
+        + sep2
+        + usd_row + oil_row
+        + bok_html
+        + pres_html
+        + updated
+        + "</div>"
+    )
 
 # ── 차트 함수 ──────────────────────────────────────────
 def cfg(): return {'displayModeBar':False}
@@ -2356,7 +2473,11 @@ if "_sub_loaded" not in st.session_state:
     st.session_state._sub_loaded = True
 
 if not YF_OK: st.warning("📦 주가: pip install yfinance 실행 필요", icon="⚠️")
-md = get_market_data()
+# 구독자 지정 회사 주가 — 세션에 저장된 ticker 사용 (없으면 빈값)
+_custom_ticker = st.session_state.get("header_ticker", "")
+_custom_name   = st.session_state.get("header_company", "")
+md = get_market_data(custom_ticker=_custom_ticker)
+md["custom_name"] = _custom_name  # 표시명 덮어쓰기
 st.markdown(f"""<div style='background:#003366;color:white;padding:8px 16px;border-radius:5px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-family:{FONT_KR};'><span style='font-size:15px;font-weight:700;'>⚡ 키워드로 오늘의 뉴스 뜯어보기_by 글쓰는 여행자</span><span style='font-size:8px;opacity:.65;'>{datetime.now().strftime('%Y.%m.%d')} | 열독률 등급 기반 | 네이버 뉴스 API</span></div>""", unsafe_allow_html=True)
 st.markdown(mhdr(md), unsafe_allow_html=True)
 
@@ -2374,6 +2495,27 @@ with st.sidebar:
         with cs1: start_date = st.date_input("시작일", datetime.now()-timedelta(days=7))
         with cs2: end_date = st.date_input("종료일", datetime.now())
         max_articles = st.select_slider("수집 기사 수", [500,1000,2000,3000,5000], value=1000)
+
+    # ── 내 회사 주가 헤더 설정 ──
+    st.markdown("---")
+    with st.expander("📌 내 회사 주가 헤더 설정", expanded=False):
+        st.caption("헤더에 실시간 주가를 표시합니다")
+        with st.form("ticker_form", clear_on_submit=False):
+            t_name   = st.text_input("회사명",  value=st.session_state.get("header_company",""), placeholder="예: 삼성전자")
+            t_ticker = st.text_input("티커 심볼", value=st.session_state.get("header_ticker",""),  placeholder="005930.KS  또는  AAPL")
+            st.caption("국내: 종목코드.KS (코스피) / .KQ (코스닥)\n해외: AAPL, TSLA, MSFT 등")
+            if st.form_submit_button("저장", use_container_width=True):
+                st.session_state["header_company"] = t_name.strip()
+                st.session_state["header_ticker"]  = t_ticker.strip()
+                get_market_data.clear()   # 캐시 초기화해서 즉시 반영
+                st.rerun()
+        if st.session_state.get("header_ticker"):
+            st.success(f"📌 {st.session_state.get('header_company','—')} ({st.session_state.get('header_ticker')}) 표시 중")
+            if st.button("초기화", key="clr_ticker"):
+                st.session_state["header_company"] = ""
+                st.session_state["header_ticker"]  = ""
+                get_market_data.clear()
+                st.rerun()
     st.markdown("---")
     if st.session_state.history:
         st.markdown("**📋 분석 이력**")
@@ -2431,19 +2573,23 @@ with st.sidebar:
                     if addr in emails:
                         for s in fresh_subs:
                             if s["email"].lower() == addr:
-                                s["keyword"]     = user_kw.strip() or "한국전력"
-                                s["send_hour"]   = int(user_hour)
-                                s["send_minute"] = int(user_minute)
+                                s["keyword"]       = user_kw.strip() or "뉴스"
+                                s["send_hour"]     = int(user_hour)
+                                s["send_minute"]   = int(user_minute)
+                                s["company_name"]  = user_co_name.strip()
+                                s["company_ticker"]= user_ticker.strip()
                         fresh["subscribers"] = fresh_subs
                         save_sub(fresh); apply_scheduler(fresh)
                         st.success(f"✅ {addr} 설정 업데이트 완료!")
                     else:
                         fresh_subs.append({
-                            "email":       addr,
-                            "keyword":     user_kw.strip() or "한국전력",
-                            "send_hour":   int(user_hour),
-                            "send_minute": int(user_minute),
-                            "joined_at":   datetime.now().strftime("%Y-%m-%d %H:%M"),
+                            "email":          addr,
+                            "keyword":        user_kw.strip() or "뉴스",
+                            "send_hour":      int(user_hour),
+                            "send_minute":    int(user_minute),
+                            "company_name":   user_co_name.strip(),
+                            "company_ticker": user_ticker.strip(),
+                            "joined_at":      datetime.now().strftime("%Y-%m-%d %H:%M"),
                         })
                         fresh["subscribers"] = fresh_subs
                         save_sub(fresh); apply_scheduler(fresh)
