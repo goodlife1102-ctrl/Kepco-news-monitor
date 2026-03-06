@@ -1301,32 +1301,33 @@ def render_report(cd):
         showlegend=False,
         paper_bgcolor='white',
         font=dict(family=FONT_KR),
-        margin=dict(l=50, r=50, t=20, b=20),
-        height=320,
+        margin=dict(l=40, r=40, t=30, b=30),
+        height=360,
         title=dict(text=f"<b>주요 비판 포인트 우선순위</b><br><sub style='font-size:9px;color:#888;'>비판 강도(5점 만점)</sub>",
                    font=dict(size=12, color='#003366', family=FONT_KR), x=0.5, xanchor='center'),
     )
 
-    r_col, detail_col = st.columns([3, 2])
+    r_col, detail_col = st.columns([1, 1])
     with r_col:
         st.plotly_chart(fig_radar, use_container_width=True, config=cfg())
 
     with detail_col:
-        # 카테고리별 순위 + 점수
-        st.markdown(f"<div style='font-size:12px;font-weight:800;color:#003366;margin-bottom:8px;font-family:{FONT_KR};'>카테고리별 비판 강도 순위</div>", unsafe_allow_html=True)
-        for rank_i, (cat, val) in enumerate(cat_neg_sorted[:6], 1):
-            if val == 0: continue
+        st.markdown(f"<div style='font-size:12px;font-weight:800;color:#003366;margin-bottom:10px;margin-top:10px;font-family:{FONT_KR};'>카테고리별 비판 강도 순위</div>", unsafe_allow_html=True)
+        visible = [(cat, val) for cat, val in cat_neg_sorted[:6] if val > 0]
+        for rank_i, (cat, val) in enumerate(visible, 1):
             score = round(val/max_v*5, 1)
             bar_w = int(score/5*100)
             num_circle = ["①","②","③","④","⑤","⑥"][rank_i-1]
-            st.markdown(f"""<div style='display:flex;align-items:center;gap:10px;margin-bottom:6px;font-family:{FONT_KR};'>
-  <span style='font-size:15px;font-weight:800;color:#C62828;min-width:24px;'>{num_circle}</span>
+            # 행 높이를 균등하게: 전체 6개 기준으로 여백 계산
+            row_mb = "margin-bottom:14px;" if len(visible) <= 4 else "margin-bottom:8px;"
+            st.markdown(f"""<div style='display:flex;align-items:center;gap:10px;{row_mb}font-family:{FONT_KR};'>
+  <span style='font-size:16px;font-weight:800;color:#C62828;min-width:26px;'>{num_circle}</span>
   <div style='flex:1;'>
-    <div style='display:flex;justify-content:space-between;margin-bottom:2px;'>
-      <span style='font-size:11px;font-weight:700;color:#333;'>{cat}</span>
-      <span style='font-size:11px;font-weight:700;color:#C62828;'>{score}/5점 ({val}건)</span>
+    <div style='display:flex;justify-content:space-between;margin-bottom:4px;'>
+      <span style='font-size:12px;font-weight:700;color:#333;'>{cat}</span>
+      <span style='font-size:12px;font-weight:700;color:#C62828;'>{score}/5점 ({val}건)</span>
     </div>
-    <div style='background:#f5f5f5;border-radius:4px;height:6px;'><div style='background:#C62828;width:{bar_w}%;height:6px;border-radius:4px;'></div></div>
+    <div style='background:#f5f5f5;border-radius:4px;height:8px;'><div style='background:#C62828;width:{bar_w}%;height:8px;border-radius:4px;'></div></div>
   </div>
 </div>""", unsafe_allow_html=True)
 
