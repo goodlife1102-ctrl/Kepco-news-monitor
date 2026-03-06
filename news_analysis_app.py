@@ -2744,9 +2744,9 @@ with st.sidebar:
             user_kw     = st.text_input("받고 싶은 키워드", value="", placeholder="예: 한국전력, 원전, 전기요금")
             user_days   = st.selectbox(
                 "📅 수집 기간",
-                [1, 2, 3, 7],
+                [1, 2, 3, 7, 30],
                 index=0,
-                format_func=lambda x: f"최근 {x}일" if x < 7 else "최근 1주일 (심층 분석)",
+                format_func=lambda x: {1:"최근 1일",2:"최근 2일",3:"최근 3일",7:"최근 1주일",30:"최근 1개월 (트렌드 분석)"}.get(x, f"최근 {x}일"),
                 help="리포트에 포함할 기사 수집 기간. 길수록 트렌드 분석에 유리합니다."
             )
             # 회사명 자동검색 (KRX 티커 자동 매핑)
@@ -2755,13 +2755,6 @@ with st.sidebar:
                 value="", placeholder="예: 삼성전자, SK하이닉스, 한국전력"
             )
             st.caption("코스피·코스닥 상장사명 입력 시 티커 자동 조회")
-            user_days = st.selectbox(
-                "📅 리포트 수집 기간",
-                [1, 2, 3, 7],
-                index=0,
-                format_func=lambda x: f"최근 {x}일" if x < 7 else "최근 1주일",
-                help="리포트에 포함할 기사 수집 범위입니다. 기간이 길수록 트렌드 분석에 유리합니다."
-            )
             uh1, uh2    = st.columns(2)
             with uh1:
                 user_hour   = st.number_input("발송 시각 (0~23시)", min_value=0, max_value=23, value=6, step=1)
