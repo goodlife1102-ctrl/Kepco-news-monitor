@@ -533,28 +533,90 @@ def mhdr(d):
 # ── 차트 함수 ──────────────────────────────────────────
 def cfg(): return {'displayModeBar':False}
 
+def extract_article_keywords(df, center_word='', top_n=28):
+    """실제 기사 헤드라인에서 핵심 명사 추출 (Okt 형태소 분석)"""
+    try:
+        from konlpy.tag import Okt
+        okt = Okt()
+    except:
+        return {}
+
+    # 불용어 목록 (조사, 의존명사, 일반 단어 제외)
+    STOPWORDS = {
+        '것','수','등','및','또','이','그','저','이번','지난','올해','올','해','내','이날','당일',
+        '관련','통해','위해','따라','대한','대해','따른','한','된','될','하는','있는','없는',
+        '하며','하여','되는','되어','이에','오는','지','년','월','일','시','분','원','명',
+        '건','개','건수','기사','뉴스','보도','기자','취재','언론','매체',
+        '한국','전력','한전','KEPCO','kepco', center_word,
+        '가운데','속에','앞서','이후','이전','이미','더욱','또한','특히','아울러',
+        '계획','예정','방침','입장','밝혀','강조','주장','설명','언급',
+    }
+
+    word_sent_map = {}  # word -> {sent: count}
+    word_headline_map = {}  # word -> [(date, media, headline)]
+
+    for _, row in df.iterrows():
+        text = str(row.get('헤드라인', ''))
+        sent = row.get('감성', '중립')
+        date = str(row.get('일자', ''))
+        media = str(row.get('매체', ''))
+
+        try:
+            nouns = okt.nouns(text)
+        except:
+            continue
+
+        seen = set()
+        for noun in nouns:
+            if len(noun) < 2: continue
+            if noun in STOPWORDS: continue
+            if noun not in word_sent_map:
+                word_sent_map[noun] = {'부정': 0, '긍정': 0, '중립': 0}
+                word_headline_map[noun] = []
+            if noun not in seen:
+                word_sent_map[noun][sent] += 1
+                seen.add(noun)
+            if len(word_headline_map[noun]) < 3:
+                word_headline_map[noun].append((date, media, text))
+
+    # 총 빈도 기준 정렬, 최소 2회 이상
+    results = {}
+    for word, sc in word_sent_map.items():
+        total = sum(sc.values())
+        if total < 2: continue
+        dom_sent = max(sc, key=sc.get)
+        results[word] = (dom_sent, total, word_headline_map.get(word, []))
+
+    # top_n개 반환
+    sorted_r = sorted(results.items(), key=lambda x: -x[1][1])[:top_n]
+    return dict(sorted_r)
+
+
 def plot_wordcloud(df, center_word='한국전력'):
     random.seed(42)
-    word_data = {}
-    for sent, words in [('부정', NEGATIVE_WORDS), ('긍정', POSITIVE_WORDS)]:
-        sub = df[df['감성']==sent]
-        txt = " ".join(sub['헤드라인'].tolist())
-        for w in words:
-            cnt = txt.count(w)
-            if cnt >= 1:
-                if w not in word_data or word_data[w][1] < cnt:
-                    word_data[w] = (sent, cnt)
-    items = sorted(word_data.items(), key=lambda x: -x[1][1])[:28]
-    max_cnt = items[0][1][1] if items else 1
 
-    # 단어별 대표 헤드라인 사전 구성
-    word_headlines = {}
-    for word, (sent, cnt) in dict(items).items():
-        mask = df['헤드라인'].str.contains(word, na=False, regex=False)
-        sample = df[mask]['헤드라인'].head(3).tolist()
-        word_headlines[word] = sample
+    # 실제 기사 기반 키워드 추출
+    art_kws = extract_article_keywords(df, center_word=center_word, top_n=30)
 
-    # 중심 단어 = 입력한 키워드
+    if art_kws:
+        # 감성 색상: 부정>중립 → 빨강, 긍정>중립 → 파랑, 균형 → 회색
+        items = list(art_kws.items())  # [(word, (sent, cnt, headlines))]
+        max_cnt = items[0][1][1] if items else 1
+    else:
+        # fallback: 기존 POSITIVE/NEGATIVE 방식
+        word_data = {}
+        for sent, words in [('부정', NEGATIVE_WORDS), ('긍정', POSITIVE_WORDS)]:
+            sub = df[df['감성']==sent]
+            txt = " ".join(sub['헤드라인'].tolist())
+            for w in words:
+                cnt = txt.count(w)
+                if cnt >= 1:
+                    if w not in word_data or word_data[w][1] < cnt:
+                        word_data[w] = (sent, cnt, [])
+        items = sorted(word_data.items(), key=lambda x: -x[1][1])[:28]
+        max_cnt = items[0][1][1] if items else 1
+
+    # 중심 단어
     center_cnt = df['헤드라인'].str.contains(center_word, na=False, regex=False).sum() if center_word else len(df)
     xs   = [0]
     ys   = [0]
@@ -564,21 +626,30 @@ def plot_wordcloud(df, center_word='한국전력'):
     hover= [f'<b>{center_word}</b> | 검색어 | {center_cnt}건']
 
     angle_step = 2.399; r_step = 0.15; base_r = 0.45
-    for i, (word, (sent, cnt)) in enumerate(items):
-        # 중심어와 동일한 단어는 건너뜀
+    for i, (word, info) in enumerate(items):
         if word == center_word:
             continue
+        sent, cnt = info[0], info[1]
+        headlines_raw = info[2] if len(info) > 2 else []
+
         angle = i * angle_step
         r = base_r + r_step * (i // 6)
         x = r * np.cos(angle) * 2.2 + random.uniform(-0.1, 0.1)
         y = r * np.sin(angle) + random.uniform(-0.07, 0.07)
         size = max(13, min(34, int(13 + (cnt / max_cnt) * 22)))
-        color = '#C62828' if sent == '부정' else '#1565C0'
+        color = '#C62828' if sent == '부정' else '#1565C0' if sent == '긍정' else '#777777'
         xs.append(x); ys.append(y); texts.append(word)
         sizes.append(size); cols.append(color)
-        headlines = word_headlines.get(word, [])
-        hl_lines = "<br>".join([f"· {h[:28]}" for h in headlines]) if headlines else "헤드라인 없음"
+
+        if headlines_raw:
+            hl_lines = "<br>".join([f"· {h[2][:26]}  <span style='color:#aaa;font-size:9px;'>({h[0]} {h[1]})</span>" for h in headlines_raw[:3]])
+        else:
+            mask = df['헤드라인'].str.contains(word, na=False, regex=False)
+            sample = df[mask][['일자','매체','헤드라인']].head(3)
+            hl_lines = "<br>".join([f"· {r2['헤드라인'][:26]}  <span style='color:#aaa;font-size:9px;'>({r2['일자']} {r2['매체']})</span>" for _,r2 in sample.iterrows()]) if not sample.empty else "헤드라인 없음"
+
         hover.append(f'<b>{word}</b> | {sent} | {cnt}회<br>──────────<br>{hl_lines}')
+
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(
@@ -994,13 +1065,23 @@ def render_report(cd):
     tone_desc = ("균형 있는 언론 환경이 유지되고 있습니다" if tone_txt=="균형"
                  else ("부정 보도가 많은 위기 국면입니다" if tone_txt=="부정 우세"
                        else "긍정 보도가 우세한 호의적 환경입니다"))
-    narrative_text = (
-        f"{period_str} 네이버 기사 전체 {total}건을 전수 분석했습니다. "
-        f"기간 내 부정 보도 {neg_rate:.0f}%, 긍정 보도 {pos_rate:.0f}%로 {tone_desc}. "
-        f"'{neg_top1_kw}' 키워드가 부정 보도의 핵심이며 언론 리스크는 {pr_s}점({pr_l})입니다. "
+    # PR 리스크 한글 레벨
+    pr_l_kr = {"HIGH":"높음","MEDIUM":"보통","LOW":"낮음"}.get(pr_l, pr_l)
+    narrative_html = (
+        f"<b>{period_str}</b> 네이버 기사 전체 <b>{total}건</b>을 전수 분석했습니다. "
+        f"기간 내 <b>부정 보도 {neg_rate:.0f}%</b>, 긍정 보도 {pos_rate:.0f}%로 {tone_desc}. "
+        f"'{neg_top1_kw}' 키워드가 부정 보도의 핵심이며 언론 리스크는 <b>{pr_s}점(보통)</b>입니다. "
+        if pr_l == "MEDIUM" else
+        f"<b>{period_str}</b> 네이버 기사 전체 <b>{total}건</b>을 전수 분석했습니다. "
+        f"기간 내 <b>부정 보도 {neg_rate:.0f}%</b>, 긍정 보도 {pos_rate:.0f}%로 {tone_desc}. "
+        f"'{neg_top1_kw}' 키워드가 부정 보도의 핵심이며 언론 리스크는 <b>{pr_s}점({pr_l_kr})</b>입니다. "
+    )
+    narrative_html += (
         f"위기관리 차원에서 선제적 대응과 '{top_neg_cat}' 이슈에 대한 공식 입장 발표가 권고됩니다. "
         f"반면 '{top_pos_cat}'와 관련한 보도는 긍정적입니다."
     )
+    # KPI 서브텍스트용 한글 레벨
+    pr_l_disp = pr_l_kr
 
     k1,k2,k3,k4,k5,k6=st.columns(6)
     for col,val,lbl,color,sub in [
@@ -1009,7 +1090,7 @@ def render_report(cd):
         (k3,f"{pos_n}건","긍정","#1565C0",f"{pos_rate:.0f}%  {top_pos_cat[:6]}"),
         (k4,f"{neu_n}건","중립","#555",f"{neu_n/total*100:.0f}%"),
         (k5,tone_sym,"논조","#333",tone_txt),
-        (k6,f"{pr_s}","PR리스크",pr_c,f"{pr_l}  /100점"),
+        (k6,f"{pr_s}","PR리스크",pr_c,f"{pr_l_disp}  /100점"),
     ]:
         col.markdown(f"""<div style='background:white;border:1px solid #e8e8e8;border-top:3px solid {color};border-radius:4px;padding:8px 6px;text-align:center;font-family:{FONT_KR};'>
         <div style='font-size:19px;font-weight:700;color:{color};line-height:1.1;'>{val}</div>
@@ -1021,7 +1102,7 @@ def render_report(cd):
         st.plotly_chart(plot_pr_gauge(pr_s, pr_c), use_container_width=True, config=cfg())
     with g2:
         st.markdown(f"""<div style='background:#F8F9FA;border-left:3px solid #003366;border-radius:0 4px 4px 0;padding:14px 18px;font-size:12px;line-height:2.0;font-family:{FONT_KR};height:130px;overflow:auto;'>
-        {narrative_text}
+        {narrative_html}
         </div>""", unsafe_allow_html=True)
 
     # ═══ 01. 워드 클라우드 ═══
@@ -1110,6 +1191,7 @@ def render_report(cd):
 </div>""", unsafe_allow_html=True)
 
     # ═══ 05. 매체×이슈 히트맵 ═══
+    st.markdown("<div style='margin-top:24px;'></div>", unsafe_allow_html=True)
     divider("05 · 매체×이슈 부정 보도율 — 커서를 셀에 올리면 기사 확인")
     fig_hm = plot_heatmap_with_hover(df)
     if fig_hm:
@@ -1172,7 +1254,7 @@ def render_report(cd):
             st.caption("최근 3개월 해당 키워드 데이터 없음")
 
     # ═══ 07. 비판 포인트 레이더 + As-Is/To-Be ═══
-    divider("07 · 비판 포인트 & 대응 전략 — 현황(As-Is) → 전략(To-Be)")
+    divider("07 · 비판 포인트 & 대응 전략")
     paired = gen_paired_insights(criticisms)
 
     # 레이더차트: 카테고리별 부정 건수 기반 6각형
@@ -1225,7 +1307,7 @@ def render_report(cd):
                    font=dict(size=12, color='#003366', family=FONT_KR), x=0.5, xanchor='center'),
     )
 
-    r_col, detail_col = st.columns([1, 2])
+    r_col, detail_col = st.columns([3, 2])
     with r_col:
         st.plotly_chart(fig_radar, use_container_width=True, config=cfg())
 
@@ -1249,7 +1331,6 @@ def render_report(cd):
 </div>""", unsafe_allow_html=True)
 
     # As-Is / To-Be
-    st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
     col_asis, col_tobe = st.columns(2)
     with col_asis:
         st.markdown(f"<div style='background:#C62828;color:white;padding:7px 14px;border-radius:6px 6px 0 0;font-size:13px;font-weight:800;font-family:{FONT_KR};'>🔴 현재 문제점 (As-Is)</div>", unsafe_allow_html=True)
