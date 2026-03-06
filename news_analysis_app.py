@@ -1003,27 +1003,35 @@ def send_email_report(cfg):
         df = pd.DataFrame(arts)
         html_body = build_email_html(arts, df, label, period_str)
 
-        # SMTP 발송
-        # 줄바꿈(\n)과 쉼표 모두 구분자로 처리
+        # SMTP 발송 — 수신자별 개별 발송 (다른 수신인 노출 방지)
         raw_recipients = cfg["recipients"].replace("\n", ",").replace("\r", "")
         recipients = [r.strip() for r in raw_recipients.split(",") if r.strip()]
         if not recipients:
             return False, "수신자 이메일 없음"
 
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = f"[KEPCO 뉴스] {label} 언론 모니터링 리포트 — {end_dt.strftime('%Y.%m.%d')}"
-        msg["From"]    = cfg["sender_email"]
-        msg["To"]      = ", ".join(recipients)
-        msg.attach(MIMEText(html_body, "html", "utf-8"))
+        subject = f"[KEPCO 뉴스] {label} 언론 모니터링 리포트 — {end_dt.strftime('%Y.%m.%d')}"
+        fail_list = []
 
         with smtplib.SMTP_SSL("smtp.naver.com", 465) as server:
             server.login(cfg["sender_email"], cfg["sender_pw"])
-            server.sendmail(cfg["sender_email"], recipients, msg.as_string())
+            for addr in recipients:
+                try:
+                    msg = MIMEMultipart("alternative")
+                    msg["Subject"] = subject
+                    msg["From"]    = cfg["sender_email"]
+                    msg["To"]      = addr          # 본인 주소만 표시
+                    msg.attach(MIMEText(html_body, "html", "utf-8"))
+                    server.sendmail(cfg["sender_email"], [addr], msg.as_string())
+                except Exception as e:
+                    fail_list.append(f"{addr}({e})")
 
         # 마지막 발송 시각 기록
         cfg["last_sent"] = datetime.now().strftime("%Y-%m-%d %H:%M")
         save_sub(cfg)
-        return True, f"{len(recipients)}명에게 발송 완료"
+
+        if fail_list:
+            return False, f"일부 실패: {', '.join(fail_list)}"
+        return True, f"{len(recipients)}명에게 개별 발송 완료"
 
     except Exception as e:
         return False, str(e)
