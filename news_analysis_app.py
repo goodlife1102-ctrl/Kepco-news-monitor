@@ -393,30 +393,78 @@ def gen_paired_insights(criticisms):
     return result
 
 def gen_criticisms(arts, kw):
-    neg=[a for a in arts if a["감성"]=="부정"]; cat_c=Counter([a["카테고리"] for a in neg])
-    DB={
-        "전기요금":{"title":"전기요금 인상 부담","points":["요금 현실화 국민 공감대 부족","저소득층 에너지 부담 대안 미흡"],"category":"전기요금"},
-        "재무·경영":{"title":"재무구조 악화 우려","points":["부채 증가·재무건전성 의문","비상경영 조치 실효성 지적"],"category":"재무·경영"},
-        "노사관계":{"title":"노사갈등·파업 리스크","points":["단체협약 갈등으로 경영 불안","공공서비스 안정성 우려"],"category":"노사관계"},
-        "공기업·거버넌스":{"title":"공기업 투명성 지적","points":["경영 비효율 반복 지적","낙하산 인사·지배구조 문제"],"category":"공기업·거버넌스"},
-        "안전·사고":{"title":"현장 안전사고 우려","points":["안전관리 체계 실효성 의문","협력사 안전망 확대 요구"],"category":"안전·사고"},
-        "전력망·설비":{"title":"전력망 노후화 문제","points":["노후 설비 정전·사고 리스크","현대화 투자 속도 부족"],"category":"전력망·설비"},
-        "탄소중립·에너지전환":{"title":"탄소중립 이행 실효성","points":["이행 속도 저조 지적","전환 비용 현실성 논란"],"category":"탄소중립·에너지전환"},
-        "정책·규제":{"title":"정책 투명성·법적 리스크","points":["일방적 정책 추진 지적","경찰 조사·소송 리스크"],"category":"정책·규제"},
-        "원전·수출":{"title":"원전 수출 신뢰성","points":["추진 일정 지연·불확실성","안전 기준 논란"],"category":"원전·수출"},
-        "AI·디지털혁신":{"title":"디지털 전환 실효성","points":["투자 대비 성과 부족","보안·개인정보 리스크"],"category":"AI·디지털혁신"},
-        "고객·서비스":{"title":"고객 서비스 대응 미흡","points":["민원 처리 속도 불만","소외계층 접근성 개선 요구"],"category":"고객·서비스"},
+    """실제 부정 기사 헤드라인을 기반으로 이슈 제목·요점을 동적 생성"""
+    neg = [a for a in arts if a["감성"] == "부정"]
+    cat_c = Counter([a["카테고리"] for a in neg])
+
+    # 카테고리별 고정 제목 (카테고리 분류명만 참조용)
+    TITLE_DB = {
+        "전기요금": "전기요금 관련 부정 보도",
+        "재무·경영": "재무·경영 위기 보도",
+        "노사관계": "노사갈등 관련 보도",
+        "공기업·거버넌스": "공기업 투명성 논란",
+        "안전·사고": "안전사고 관련 보도",
+        "전력망·설비": "전력망·설비 문제 보도",
+        "탄소중립·에너지전환": "탄소중립 이행 논란",
+        "정책·규제": "정책·규제 관련 부정 보도",
+        "원전·수출": "원전·수출 신뢰성 논란",
+        "AI·디지털혁신": "디지털 혁신 실효성 논란",
+        "고객·서비스": "고객서비스 불만 보도",
     }
-    result=[]
-    for cat,cnt2 in cat_c.most_common(8):
-        if cat=="기타": continue
-        item=DB.get(cat,{"title":f"{cat} 비판 보도","points":["모니터링 강화 필요","맞춤 대응 메시지 개발"],"category":cat}).copy()
-        item["dots"]=min(5,max(2,cnt2//max(1,len(neg)//10)+2)); result.append(item)
-        if len(result)==3: break
-    defs=[{"title":"커뮤니케이션 체계 미흡","points":["위기 시 신속 대응 부족","공식 채널 속도 개선 필요"],"dots":3,"category":"기타"},
-          {"title":"사회적 책임 이행 부족","points":["CSR 기대치 미충족","이해관계자 소통 강화"],"dots":2,"category":"기타"},
-          {"title":"미디어 관계 강화 필요","points":["전담 기자 관계 구축","정기 브리핑 채널 부재"],"dots":2,"category":"기타"}]
-    while len(result)<3: result.append(defs.pop(0))
+
+    result = []
+    for cat, cnt2 in cat_c.most_common(8):
+        if cat == "기타":
+            continue
+        # 해당 카테고리 부정 기사 중 최신순 헤드라인 최대 3건 추출
+        cat_arts = [a for a in neg if a["카테고리"] == cat]
+        cat_arts_sorted = sorted(cat_arts, key=lambda x: x.get("일자", ""), reverse=True)
+
+        # 헤드라인에서 핵심 부정 키워드 등장 문장 우선 선별
+        headlines = []
+        for a in cat_arts_sorted:
+            h = str(a.get("헤드라인", "")).strip()
+            if h and h not in headlines:
+                headlines.append(h)
+            if len(headlines) >= 3:
+                break
+
+        # points = 실제 헤드라인 요약 (30자 이내 truncate)
+        points = [h[:32] + ("..." if len(h) > 32 else "") for h in headlines[:2]]
+        if not points:
+            points = ["관련 부정 보도 집중 모니터링 필요"]
+
+        # 이슈 제목: 카테고리 기본 제목 사용 (헤드라인 기반이므로 동일 카테고리라도 매번 다른 기사 반영)
+        title = TITLE_DB.get(cat, f"{cat} 비판 보도")
+
+        dots = min(5, max(2, cnt2 // max(1, len(neg) // 10) + 2))
+        result.append({"title": title, "points": points, "dots": dots, "category": cat, "headlines": headlines})
+        if len(result) == 3:
+            break
+
+    # 3개 미만이면 부족분 보충 (실제 기사 기반 기타 이슈)
+    if len(result) < 3:
+        other_neg = [a for a in neg if a["카테고리"] == "기타"]
+        other_sorted = sorted(other_neg, key=lambda x: x.get("일자", ""), reverse=True)
+        other_headlines = list({a.get("헤드라인", "") for a in other_sorted if a.get("헤드라인")})[:3]
+        while len(result) < 3:
+            h_list = other_headlines[:2] if other_headlines else []
+            pts = [h[:32] + ("..." if len(h) > 32 else "") for h in h_list] or ["커뮤니케이션 강화 필요"]
+            result.append({"title": "기타 부정 보도 동향", "points": pts, "dots": 2, "category": "기타", "headlines": h_list})
+            other_headlines = other_headlines[2:]
+            if not other_headlines:
+                break
+
+    # 그래도 3개 미만이면 placeholder
+    fallbacks = [
+        {"title": "커뮤니케이션 체계 미흡", "points": ["위기 시 신속 대응 부족", "공식 채널 속도 개선 필요"], "dots": 3, "category": "기타", "headlines": []},
+        {"title": "사회적 책임 이행 부족",  "points": ["CSR 기대치 미충족", "이해관계자 소통 강화"], "dots": 2, "category": "기타", "headlines": []},
+        {"title": "미디어 관계 강화 필요",  "points": ["전담 기자 관계 구축", "정기 브리핑 채널 부재"], "dots": 2, "category": "기타", "headlines": []},
+    ]
+    i = 0
+    while len(result) < 3 and i < len(fallbacks):
+        result.append(fallbacks[i]); i += 1
+
     return result[:3]
 
 # ── 유틸 ──────────────────────────────────────────────
