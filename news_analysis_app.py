@@ -1325,6 +1325,104 @@ def apply_scheduler(cfg):
 
 
 # ── 시장 데이터 ───────────────────────────────────────
+@st.cache_data(ttl=86400)
+def lookup_krx_ticker(company_name):
+    """회사명으로 KRX 티커 자동검색 (코스피 우선, 없으면 코스닥)"""
+    if not company_name:
+        return "", ""
+    try:
+        # KRX KIND API — 회사명 검색
+        r = requests.get(
+            "https://kind.krx.co.kr/common/searchcorpname.do",
+            params={"method": "searchCorpNameJson", "searchCorpName": company_name,
+                    "copyPageSize": "10", "currentPageSize": "10"},
+            headers={"User-Agent": "Mozilla/5.0", "Referer": "https://kind.krx.co.kr/"},
+            timeout=5
+        )
+        data = r.json()
+        rows = data.get("result", data.get("list", []))
+        if not rows and isinstance(data, list):
+            rows = data
+        if rows:
+            # 정확 일치 우선, 없으면 첫 번째
+            exact = [x for x in rows if str(x.get("corpNm","")).strip() == company_name.strip()]
+            row   = exact[0] if exact else rows[0]
+            code  = str(row.get("stockCode", row.get("isu_cd",""))).strip().zfill(6)
+            name  = str(row.get("corpNm", company_name)).strip()
+            mkt   = str(row.get("marketName", row.get("mkt",""))).strip()
+            suffix = ".KQ" if "코스닥" in mkt or "KOSDAQ" in mkt.upper() else ".KS"
+            ticker = code + suffix if code else ""
+            return name, ticker
+    except: pass
+    return company_name, ""
+
+
+@st.cache_data(ttl=3600)
+def get_weekly_pres_schedule():
+    """대통령실 금주 일정 2~3건 수집"""
+    schedules = []
+    # 시도 1: 대통령실 공식 RSS
+    try:
+        for url in [
+            "https://www.president.go.kr/rss/schedule",
+            "https://www.president.go.kr/newsroom/schedule",
+        ]:
+            r = requests.get(url, headers={"User-Agent":"Mozilla/5.0"}, timeout=4)
+            if r.status_code != 200:
+                continue
+            # CDATA 방식과 일반 방식 모두 파싱
+            items = re.findall(
+                r"<item>.*?<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</title>.*?<pubDate>(.*?)</pubDate>.*?</item>",
+                r.text, re.DOTALL
+            )
+            if not items:
+                items_t = re.findall(r"<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</title>", r.text)
+                items_d = re.findall(r"<pubDate>(.*?)</pubDate>", r.text)
+                items   = list(zip(items_t[1:], items_d)) if items_d else [(t,"") for t in items_t[1:]]
+
+            # 금주(월~일) 필터
+            week_start = datetime.now() - timedelta(days=datetime.now().weekday())
+            week_end   = week_start + timedelta(days=6)
+            for title, pub in items[:10]:
+                title = title.strip()
+                if not title or len(title) < 2:
+                    continue
+                # 날짜 파싱 시도
+                try:
+                    from email.utils import parsedate_to_datetime
+                    pub_dt = parsedate_to_datetime(pub.strip())
+                    if not (week_start.date() <= pub_dt.date() <= week_end.date()):
+                        continue
+                except:
+                    pass  # 날짜 파싱 실패 시 그냥 포함
+                if title not in schedules:
+                    schedules.append(title)
+                if len(schedules) >= 3:
+                    break
+            if schedules:
+                break
+    except: pass
+
+    # 시도 2: 네이버 뉴스 검색 대체 (RSS 실패 시)
+    if not schedules:
+        try:
+            r = requests.get(
+                "https://openapi.naver.com/v1/search/news.json",
+                headers={"X-Naver-Client-Id": CLIENT_ID, "X-Naver-Client-Secret": CLIENT_SECRET},
+                params={"query": "대통령 일정", "display": 5, "sort": "date"},
+                timeout=4
+            )
+            items = r.json().get("items", [])
+            for item in items[:3]:
+                title = re.sub(r"<[^>]+>","", item.get("title","")).strip()
+                if title and len(title) > 5:
+                    # 30자 이내로 truncate
+                    schedules.append(title[:28] + ("…" if len(title)>28 else ""))
+        except: pass
+
+    return schedules[:3]
+
+
 @st.cache_data(ttl=1800)
 def get_market_data(custom_ticker=""):
     d = {
@@ -1376,37 +1474,8 @@ def get_market_data(custom_ticker=""):
                     d.update({"custom_price": price_str,"custom_c": chg_str,"custom_up": up})
             except: pass
 
-    # 한은 기준금리 — 변동 적을 때 수동 갱신용 (ECOS API 또는 하드코딩)
-    try:
-        r = requests.get(
-            "https://ecos.bok.or.kr/api/StatisticSearch/sample/json/kr/1/1/722Y001/D/"
-            + (datetime.now()-timedelta(days=7)).strftime("%Y%m%d")
-            + "/" + datetime.now().strftime("%Y%m%d")
-            + "/0101000",
-            timeout=4
-        )
-        rows = r.json().get("StatisticSearch",{}).get("row",[])
-        if rows:
-            d["bok_rate"] = str(rows[-1].get("DATA_VALUE","—")) + "%"
-    except:
-        d["bok_rate"] = "3.00%"   # fallback: 최근 기준금리
-
-    # 대통령 일정 — 청와대/대통령실 RSS 파싱
-    try:
-        rss = requests.get(
-            "https://www.president.go.kr/rss/schedule",
-            headers={"User-Agent":"Mozilla/5.0"},
-            timeout=4
-        )
-        titles = re.findall(r"<title><!\[CDATA\[(.*?)\]\]></title>", rss.text)
-        if not titles:
-            titles = re.findall(r"<title>(.*?)</title>", rss.text)
-        today_str = datetime.now().strftime("%Y.%m.%d")
-        today_items = [t.strip() for t in titles[1:4] if t.strip() and "대통령" not in t[:2]]
-        d["pres_sched"] = " · ".join(today_items[:2]) if today_items else ""
-    except:
-        d["pres_sched"] = ""
-
+    # 금주 대통령 일정 (별도 캐시 함수로 처리)
+    d["pres_sched"] = get_weekly_pres_schedule()   # list of str
     return d
 
 def mhdr(d):
@@ -1445,24 +1514,23 @@ def mhdr(d):
     usd_row = cell("USD/KRW",   d["usd_krw"], cs(d["usd_c"], d["usd_up"]))
     oil_row = cell("두바이유($/bbl)", d["oil"], cs(d["oil_c"], d["oil_up"]))
 
-    # 한은 기준금리
-    bok_html = (
-        "<div style='border-left:1px solid #ddd;padding-left:10px;margin-right:10px;'>"
-        "<div style='font-size:8px;color:#888;font-weight:700;'>한은 기준금리</div>"
-        f"<div style='font-size:13px;font-weight:800;color:#1B5E20;'>{d['bok_rate']}</div>"
-        "<div style='font-size:8px;color:#aaa;'>기준금리(연)</div></div>"
-    )
-
-    # 대통령 일정 (있을 때만)
+    # 금주 대통령 일정 (리스트 → 줄바꿈 표시)
     pres_html = ""
-    if d.get("pres_sched",""):
-        pres_html = (
-            "<div style='border-left:1px solid #ddd;padding-left:10px;margin-right:6px;"
-            "max-width:180px;overflow:hidden;'>"
-            "<div style='font-size:8px;color:#888;font-weight:700;'>대통령 일정</div>"
+    pres_list = d.get("pres_sched", [])
+    if isinstance(pres_list, str) and pres_list:
+        pres_list = [pres_list]
+    if pres_list:
+        items_html = "".join(
             f"<div style='font-size:9px;font-weight:600;color:#4A148C;"
-            f"white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'>"
-            f"{d['pres_sched']}</div></div>"
+            f"white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+            f"max-width:200px;'>{item[:30]}{"…" if len(item)>30 else ""}</div>"
+            for item in pres_list[:3]
+        )
+        pres_html = (
+            "<div style='border-left:1px solid #ddd;padding-left:10px;margin-right:6px;'>"
+            "<div style='font-size:8px;color:#888;font-weight:700;margin-bottom:2px;'>🗓 금주 대통령 일정</div>"
+            + items_html +
+            "</div>"
         )
 
     updated = f"<div style='margin-left:auto;font-size:8px;color:#ccc;'>{d['updated']}</div>"
@@ -1477,7 +1545,6 @@ def mhdr(d):
         + custom_html
         + sep2
         + usd_row + oil_row
-        + bok_html
         + pres_html
         + updated
         + "</div>"
@@ -2496,26 +2563,6 @@ with st.sidebar:
         with cs2: end_date = st.date_input("종료일", datetime.now())
         max_articles = st.select_slider("수집 기사 수", [500,1000,2000,3000,5000], value=1000)
 
-    # ── 내 회사 주가 헤더 설정 ──
-    st.markdown("---")
-    with st.expander("📌 내 회사 주가 헤더 설정", expanded=False):
-        st.caption("헤더에 실시간 주가를 표시합니다")
-        with st.form("ticker_form", clear_on_submit=False):
-            t_name   = st.text_input("회사명",  value=st.session_state.get("header_company",""), placeholder="예: 삼성전자")
-            t_ticker = st.text_input("티커 심볼", value=st.session_state.get("header_ticker",""),  placeholder="005930.KS  또는  AAPL")
-            st.caption("국내: 종목코드.KS (코스피) / .KQ (코스닥)\n해외: AAPL, TSLA, MSFT 등")
-            if st.form_submit_button("저장", use_container_width=True):
-                st.session_state["header_company"] = t_name.strip()
-                st.session_state["header_ticker"]  = t_ticker.strip()
-                get_market_data.clear()   # 캐시 초기화해서 즉시 반영
-                st.rerun()
-        if st.session_state.get("header_ticker"):
-            st.success(f"📌 {st.session_state.get('header_company','—')} ({st.session_state.get('header_ticker')}) 표시 중")
-            if st.button("초기화", key="clr_ticker"):
-                st.session_state["header_company"] = ""
-                st.session_state["header_ticker"]  = ""
-                get_market_data.clear()
-                st.rerun()
     st.markdown("---")
     if st.session_state.history:
         st.markdown("**📋 분석 이력**")
@@ -2550,7 +2597,13 @@ with st.sidebar:
         )
         with st.form("user_sub_form", clear_on_submit=True):
             user_email  = st.text_input("내 이메일", placeholder="my@email.com", label_visibility="collapsed")
-            user_kw     = st.text_input("받고 싶은 키워드", value="한국전력", help="예: 한국전력, 원전, 전기요금")
+            user_kw     = st.text_input("받고 싶은 키워드", value="", placeholder="예: 한국전력, 원전, 전기요금")
+            # 회사명 자동검색 (KRX 티커 자동 매핑)
+            user_co_name = st.text_input(
+                "📌 내 회사명 (선택) — 입력하면 헤더에 실시간 주가 표시",
+                value="", placeholder="예: 삼성전자, SK하이닉스, LG에너지솔루션"
+            )
+            st.caption("코스피·코스닥 상장사명 입력 시 티커 자동 조회")
             uh1, uh2    = st.columns(2)
             with uh1:
                 user_hour   = st.number_input("발송 시각 (0~23시)", min_value=0, max_value=23, value=6, step=1)
@@ -2566,6 +2619,16 @@ with st.sidebar:
             if not addr or "@" not in addr:
                 st.error("올바른 이메일 주소를 입력해 주세요.")
             else:
+                # 회사명 → 티커 자동 조회
+                resolved_name, resolved_ticker = "", ""
+                if user_co_name.strip():
+                    with st.spinner(f"'{user_co_name}' 티커 조회 중..."):
+                        resolved_name, resolved_ticker = lookup_krx_ticker(user_co_name.strip())
+                    if resolved_ticker:
+                        st.info(f"📌 {resolved_name} ({resolved_ticker}) — 헤더 주가 등록")
+                    else:
+                        st.warning(f"'{user_co_name}' 을(를) KRX에서 찾지 못했습니다. 상장사명을 정확히 입력해 주세요.")
+
                 fresh      = load_sub()
                 fresh_subs = fresh.get("subscribers", [])
                 emails     = [s["email"].lower() for s in fresh_subs]
@@ -2573,13 +2636,19 @@ with st.sidebar:
                     if addr in emails:
                         for s in fresh_subs:
                             if s["email"].lower() == addr:
-                                s["keyword"]       = user_kw.strip() or "뉴스"
-                                s["send_hour"]     = int(user_hour)
-                                s["send_minute"]   = int(user_minute)
-                                s["company_name"]  = user_co_name.strip()
-                                s["company_ticker"]= user_ticker.strip()
+                                s["keyword"]        = user_kw.strip() or "뉴스"
+                                s["send_hour"]      = int(user_hour)
+                                s["send_minute"]    = int(user_minute)
+                                if resolved_ticker:
+                                    s["company_name"]   = resolved_name
+                                    s["company_ticker"] = resolved_ticker
                         fresh["subscribers"] = fresh_subs
                         save_sub(fresh); apply_scheduler(fresh)
+                        # 헤더 즉시 반영
+                        if resolved_ticker:
+                            st.session_state["header_company"] = resolved_name
+                            st.session_state["header_ticker"]  = resolved_ticker
+                            get_market_data.clear()
                         st.success(f"✅ {addr} 설정 업데이트 완료!")
                     else:
                         fresh_subs.append({
@@ -2587,15 +2656,21 @@ with st.sidebar:
                             "keyword":        user_kw.strip() or "뉴스",
                             "send_hour":      int(user_hour),
                             "send_minute":    int(user_minute),
-                            "company_name":   user_co_name.strip(),
-                            "company_ticker": user_ticker.strip(),
+                            "company_name":   resolved_name,
+                            "company_ticker": resolved_ticker,
                             "joined_at":      datetime.now().strftime("%Y-%m-%d %H:%M"),
                         })
                         fresh["subscribers"] = fresh_subs
                         save_sub(fresh); apply_scheduler(fresh)
+                        # 헤더 즉시 반영
+                        if resolved_ticker:
+                            st.session_state["header_company"] = resolved_name
+                            st.session_state["header_ticker"]  = resolved_ticker
+                            get_market_data.clear()
+                        co_txt = f" · 📌 {resolved_name} 주가 헤더 등록" if resolved_ticker else ""
                         st.success(
                             f"매일 {int(user_hour):02d}:{int(user_minute):02d}에 "
-                            f"[{user_kw}] 뉴스 리포트를 보내드립니다."
+                            f"[{user_kw}] 뉴스 리포트를 보내드립니다.{co_txt}"
                         )
                 else:
                     if addr not in emails:
