@@ -5,7 +5,9 @@ import pandas as pd
 import plotly.graph_objects as go
 import numpy as np
 from datetime import datetime, timedelta
-import re, io, random
+import re, io, random, json, os, smtplib, threading
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from collections import Counter
 from docx import Document
 from docx.shared import Pt, RGBColor, Cm
@@ -13,6 +15,13 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 import streamlit.components.v1 as components
+
+try:
+    from apscheduler.schedulers.background import BackgroundScheduler
+    from apscheduler.triggers.cron import CronTrigger
+    SCHEDULER_OK = True
+except:
+    SCHEDULER_OK = False
 
 try:
     import yfinance as yf
@@ -535,6 +544,274 @@ def calc_pr_risk(neg_n,total,neg_kws,crisis_found,top_neg_media):
     if s>=70: return s,"HIGH","#C62828"
     elif s>=40: return s,"MEDIUM","#E65100"
     return s,"LOW","#2E7D32"
+
+# ══ 구독 알리미 시스템 ══════════════════════════════════
+
+SUBSCRIPTION_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "subscription.json")
+
+def load_sub():
+    try:
+        with open(SUBSCRIPTION_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except:
+        return {
+            "enabled": False,
+            "sender_email": "",
+            "sender_pw": "",
+            "recipients": "",
+            "send_hour": 6,
+            "send_minute": 30,
+            "keyword": "한국전력",
+            "days": 1,
+            "last_sent": "",
+        }
+
+def save_sub(cfg):
+    try:
+        with open(SUBSCRIPTION_FILE, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, ensure_ascii=False, indent=2)
+        return True
+    except:
+        return False
+
+def build_email_html(arts, df, label, period_str):
+    """분석 결과를 HTML 이메일 본문으로 변환"""
+    total = len(df)
+    if total == 0:
+        return "<p>수집된 기사가 없습니다.</p>"
+    cv = df["감성"].value_counts()
+    neg_n = int(cv.get("부정", 0))
+    pos_n = int(cv.get("긍정", 0))
+    neu_n = int(cv.get("중립", 0))
+    neg_rate = neg_n / total * 100
+    pos_rate = pos_n / total * 100
+
+    # PR 리스크
+    nk = extract_kws(df.to_dict("records"), "부정", n=5)
+    neg_med = [m for m, _ in df[df["감성"] == "부정"]["매체"].value_counts().head(5).items()]
+    pr_s, pr_l, pr_c = calc_pr_risk(neg_n, total, nk, False, neg_med)
+    pr_l_kr = {"HIGH": "높음", "MEDIUM": "보통", "LOW": "낮음"}.get(pr_l, pr_l)
+
+    # TOP 부정 기사 5건
+    neg_top = df[df["감성"] == "부정"].sort_values("일자", ascending=False).head(5)
+    neg_rows = ""
+    for _, row in neg_top.iterrows():
+        gi = MEDIA_GRADE.get(row["매체"], {}); grade = gi.get("grade", "")
+        gc = GRADE_COLOR.get(grade, "#999")
+        neg_rows += f"""<tr>
+          <td style='padding:6px 8px;font-size:12px;color:#333;border-bottom:1px solid #f0f0f0;'>
+            <span style='background:{gc};color:white;padding:1px 5px;border-radius:3px;font-size:10px;font-weight:700;margin-right:4px;'>{grade}</span>
+            <b style='color:#777;'>{row['매체']}</b>
+          </td>
+          <td style='padding:6px 8px;font-size:12px;color:#333;border-bottom:1px solid #f0f0f0;'>
+            <a href='{row["링크"]}' style='color:#003366;text-decoration:none;'>{row['헤드라인']}</a>
+          </td>
+          <td style='padding:6px 8px;font-size:11px;color:#999;border-bottom:1px solid #f0f0f0;white-space:nowrap;'>{row['일자']}</td>
+        </tr>"""
+
+    # TOP 긍정 기사 3건
+    pos_top = df[df["감성"] == "긍정"].sort_values("일자", ascending=False).head(3)
+    pos_rows = ""
+    for _, row in pos_top.iterrows():
+        pos_rows += f"""<tr>
+          <td style='padding:6px 8px;font-size:12px;border-bottom:1px solid #f0f0f0;'>
+            <b style='color:#777;'>{row['매체']}</b>
+          </td>
+          <td style='padding:6px 8px;font-size:12px;border-bottom:1px solid #f0f0f0;'>
+            <a href='{row["링크"]}' style='color:#1565C0;text-decoration:none;'>{row['헤드라인']}</a>
+          </td>
+          <td style='padding:6px 8px;font-size:11px;color:#999;border-bottom:1px solid #f0f0f0;white-space:nowrap;'>{row['일자']}</td>
+        </tr>"""
+
+    # 키워드
+    neg_kw_html = " ".join([f"<span style='background:#FFEBEE;color:#C62828;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:700;margin:2px;display:inline-block;'>{k}({v})</span>" for k, v in nk[:5]])
+    pos_kws = extract_kws(df.to_dict("records"), "긍정", n=3)
+    pos_kw_html = " ".join([f"<span style='background:#E3F2FD;color:#1565C0;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:700;margin:2px;display:inline-block;'>{k}({v})</span>" for k, v in pos_kws[:3]])
+
+    # 카테고리 TOP 이슈
+    cat_neg = df[df["감성"] == "부정"]["카테고리"].value_counts().head(3)
+    cat_rows = "".join([f"<li style='margin-bottom:4px;font-size:12px;'><b>{c}</b> — 부정 {n}건</li>" for c, n in cat_neg.items()])
+
+    tone_color = "#C62828" if neg_n > pos_n * 1.5 else "#1565C0" if pos_n > neg_n * 1.5 else "#E65100"
+    tone_txt = "부정 우세" if neg_n > pos_n * 1.5 else "긍정 우세" if pos_n > neg_n * 1.5 else "균형"
+    pr_bg = "#FFEBEE" if pr_s >= 70 else "#FFF3E0" if pr_s >= 40 else "#E8F5E9"
+
+    now_str = datetime.now().strftime("%Y년 %m월 %d일 %H:%M")
+
+    html = f"""<!DOCTYPE html>
+<html><head><meta charset='utf-8'>
+<style>
+  body {{ font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', Arial, sans-serif; margin:0; padding:0; background:#f5f5f5; }}
+  .wrap {{ max-width:680px; margin:20px auto; background:white; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.1); }}
+  .hdr  {{ background:#003366; color:white; padding:18px 24px; }}
+  .body {{ padding:20px 24px; }}
+  .kpi  {{ display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; }}
+  .kpi-box {{ flex:1; min-width:90px; background:#F4F6F9; border-radius:6px; padding:10px 12px; text-align:center; border-top:3px solid {tone_color}; }}
+  table {{ width:100%; border-collapse:collapse; }}
+  .sec  {{ margin-bottom:20px; }}
+  .sec-title {{ font-size:13px; font-weight:800; color:#003366; border-bottom:2px solid #003366; padding-bottom:5px; margin-bottom:10px; }}
+  .ftr  {{ background:#f8f8f8; padding:12px 24px; font-size:10px; color:#aaa; text-align:center; border-top:1px solid #eee; }}
+</style></head><body>
+<div class='wrap'>
+  <div class='hdr'>
+    <div style='font-size:18px;font-weight:800;'>⚡ {label} 뉴스 모니터링 리포트</div>
+    <div style='font-size:11px;opacity:.75;margin-top:4px;'>{period_str} | {now_str} 발송 | 뉴스 모니터링 및 유형분석 시스템_by KEPCO</div>
+  </div>
+  <div class='body'>
+
+    <!-- KPI -->
+    <div class='kpi'>
+      <div class='kpi-box'>
+        <div style='font-size:22px;font-weight:800;color:#003366;'>{total}</div>
+        <div style='font-size:10px;color:#888;margin-top:2px;'>총 기사</div>
+      </div>
+      <div class='kpi-box' style='border-top-color:#C62828;'>
+        <div style='font-size:22px;font-weight:800;color:#C62828;'>{neg_n}</div>
+        <div style='font-size:10px;color:#888;margin-top:2px;'>부정 ({neg_rate:.0f}%)</div>
+      </div>
+      <div class='kpi-box' style='border-top-color:#1565C0;'>
+        <div style='font-size:22px;font-weight:800;color:#1565C0;'>{pos_n}</div>
+        <div style='font-size:10px;color:#888;margin-top:2px;'>긍정 ({pos_rate:.0f}%)</div>
+      </div>
+      <div class='kpi-box' style='border-top-color:#888;'>
+        <div style='font-size:22px;font-weight:800;color:#555;'>{neu_n}</div>
+        <div style='font-size:10px;color:#888;margin-top:2px;'>중립</div>
+      </div>
+      <div class='kpi-box' style='border-top-color:{pr_c};background:{pr_bg};'>
+        <div style='font-size:22px;font-weight:800;color:{pr_c};'>{pr_s}점</div>
+        <div style='font-size:10px;color:#888;margin-top:2px;'>PR리스크 ({pr_l_kr})</div>
+      </div>
+    </div>
+
+    <!-- 키워드 -->
+    <div class='sec'>
+      <div class='sec-title'>🔑 주요 키워드</div>
+      <div style='margin-bottom:6px;'><b style='font-size:11px;color:#C62828;'>부정 키워드</b><br>{neg_kw_html if neg_kw_html else '<span style="color:#aaa;font-size:11px;">없음</span>'}</div>
+      <div><b style='font-size:11px;color:#1565C0;'>긍정 키워드</b><br>{pos_kw_html if pos_kw_html else '<span style="color:#aaa;font-size:11px;">없음</span>'}</div>
+    </div>
+
+    <!-- 주요 이슈 -->
+    <div class='sec'>
+      <div class='sec-title'>📌 주요 비판 이슈 TOP3</div>
+      <ul style='margin:0;padding-left:18px;color:#333;'>{cat_rows if cat_rows else '<li>없음</li>'}</ul>
+    </div>
+
+    <!-- 부정 기사 -->
+    <div class='sec'>
+      <div class='sec-title'>🔴 주요 부정 기사 TOP5</div>
+      {'<table>' + neg_rows + '</table>' if neg_rows else '<p style="color:#aaa;font-size:12px;">부정 기사 없음</p>'}
+    </div>
+
+    <!-- 긍정 기사 -->
+    <div class='sec'>
+      <div class='sec-title'>🔵 주요 긍정 기사 TOP3</div>
+      {'<table>' + pos_rows + '</table>' if pos_rows else '<p style="color:#aaa;font-size:12px;">긍정 기사 없음</p>'}
+    </div>
+
+  </div>
+  <div class='ftr'>
+    ⚡ 뉴스 모니터링 및 유형분석 시스템_by KEPCO &nbsp;|&nbsp; 네이버 뉴스 API 기반 자동 분석 &nbsp;|&nbsp; 열독률: 언론진흥재단('23)<br>
+    본 메일은 구독 설정에 따라 자동 발송되었습니다. 수신을 원하지 않으면 앱에서 구독을 해제해 주세요.
+  </div>
+</div>
+</body></html>"""
+    return html
+
+
+def send_email_report(cfg):
+    """네이버 SMTP로 리포트 발송 (날짜: 어제 ~ 오늘)"""
+    try:
+        end_dt   = datetime.now().date()
+        start_dt = end_dt - timedelta(days=max(1, int(cfg.get("days", 1))))
+        period_str = f"{start_dt.strftime('%Y.%m.%d')} ~ {end_dt.strftime('%m.%d')}"
+        label = cfg.get("keyword", "한국전력")
+
+        # 뉴스 수집
+        raw = get_news(label, 1000)
+        arts = []
+        for a in raw:
+            pub = a.get("pubDate", "")
+            try:
+                ad = datetime.strptime(pub[:16], "%a, %d %b %Y").date()
+                if not (start_dt <= ad <= end_dt): continue
+                ds = ad.strftime("%Y-%m-%d"); hs = pub[17:19] if len(pub) > 18 else "00"
+            except:
+                ds = pub[:10]; hs = "00"
+            title = clean(a.get("title", "")); desc = clean(a.get("description", ""))
+            text = title + " " + desc
+            orig = a.get("originallink", ""); link = a.get("link", "")
+            if not is_relevant(text): continue
+            media = get_media(orig, link); gi = MEDIA_GRADE.get(media, {})
+            arts.append({"키워드그룹": label, "일자": ds, "월": ds[:7], "시간": hs,
+                         "매체": media, "등급": gi.get("grade","—"), "열독률": gi.get("rate", 0.05),
+                         "헤드라인": title, "요약": summarize(desc, 30),
+                         "감성": get_sentiment(text), "카테고리": "",
+                         "기자": "—", "링크": orig if orig else link})
+        if not arts:
+            return False, "수집된 기사 없음"
+
+        arts = auto_cat(arts)
+        df = pd.DataFrame(arts)
+        html_body = build_email_html(arts, df, label, period_str)
+
+        # SMTP 발송
+        recipients = [r.strip() for r in cfg["recipients"].split(",") if r.strip()]
+        if not recipients:
+            return False, "수신자 이메일 없음"
+
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = f"[KEPCO 뉴스] {label} 언론 모니터링 리포트 — {end_dt.strftime('%Y.%m.%d')}"
+        msg["From"]    = cfg["sender_email"]
+        msg["To"]      = ", ".join(recipients)
+        msg.attach(MIMEText(html_body, "html", "utf-8"))
+
+        with smtplib.SMTP_SSL("smtp.naver.com", 465) as server:
+            server.login(cfg["sender_email"], cfg["sender_pw"])
+            server.sendmail(cfg["sender_email"], recipients, msg.as_string())
+
+        # 마지막 발송 시각 기록
+        cfg["last_sent"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+        save_sub(cfg)
+        return True, f"{len(recipients)}명에게 발송 완료"
+
+    except Exception as e:
+        return False, str(e)
+
+
+def init_scheduler():
+    """APScheduler 싱글톤 초기화 — Streamlit 세션당 1회"""
+    if not SCHEDULER_OK:
+        return None
+    key = "_kepco_scheduler"
+    import streamlit.runtime.scriptrunner as sr
+    # 스레드 레벨 글로벌로 보관
+    if not hasattr(st, key):
+        sched = BackgroundScheduler(timezone="Asia/Seoul")
+        sched.start()
+        setattr(st, key, sched)
+    return getattr(st, key)
+
+
+def apply_scheduler(cfg):
+    """구독 설정에 맞게 스케줄러 잡 등록/갱신"""
+    sched = init_scheduler()
+    if sched is None:
+        return
+    # 기존 잡 제거
+    if sched.get_job("kepco_daily"):
+        sched.remove_job("kepco_daily")
+    if not cfg.get("enabled"):
+        return
+    h = int(cfg.get("send_hour", 6))
+    m = int(cfg.get("send_minute", 30))
+    sched.add_job(
+        lambda: send_email_report(load_sub()),
+        CronTrigger(hour=h, minute=m, timezone="Asia/Seoul"),
+        id="kepco_daily",
+        replace_existing=True,
+        misfire_grace_time=300,
+    )
+
 
 # ── 시장 데이터 ───────────────────────────────────────
 @st.cache_data(ttl=1800)
@@ -1499,6 +1776,13 @@ div[data-testid="stVerticalBlock"]>div{{gap:0.3rem;}}
 for k,v in [("history",[]),("analysis_cache",{}),("active_key",None)]:
     if k not in st.session_state: st.session_state[k]=v
 
+# 구독 설정 로드 & 스케줄러 초기화 (앱 시작 시 1회)
+if "_sub_loaded" not in st.session_state:
+    _sub_cfg = load_sub()
+    if _sub_cfg.get("enabled"):
+        apply_scheduler(_sub_cfg)
+    st.session_state._sub_loaded = True
+
 if not YF_OK: st.warning("📦 주가: pip install yfinance 실행 필요", icon="⚠️")
 md = get_market_data()
 st.markdown(f"""<div style='background:#003366;color:white;padding:8px 16px;border-radius:5px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-family:{FONT_KR};'><span style='font-size:15px;font-weight:700;'>⚡ 뉴스 모니터링 및 유형분석 시스템_by KEPCO</span><span style='font-size:8px;opacity:.65;'>{datetime.now().strftime('%Y.%m.%d')} | 열독률 등급 기반 | 네이버 뉴스 API</span></div>""", unsafe_allow_html=True)
@@ -1527,6 +1811,91 @@ with st.sidebar:
             if st.button(f"{'▶ ' if active else ''}#{i} {h['keyword']}\n{h['period']} | 부정{nr:.0f}%", key=f"hb_{i}", use_container_width=True):
                 st.session_state.active_key=h['cache_key']; st.rerun()
     else: st.caption("분석 후 이력이 쌓입니다")
+
+    # ══ 구독 알리미 UI ══
+    st.markdown("---")
+    sub_cfg = load_sub()
+    status_icon = "🟢" if sub_cfg.get("enabled") else "⚫"
+    last_sent   = sub_cfg.get("last_sent", "")
+    last_txt    = f"마지막 발송: {last_sent}" if last_sent else "아직 발송 없음"
+
+    with st.expander(f"{status_icon} 뉴스 알리미 구독 설정", expanded=False):
+        st.markdown(f"<div style='font-size:10px;color:#888;margin-bottom:8px;font-family:{FONT_KR};'>{last_txt}</div>", unsafe_allow_html=True)
+
+        with st.form("sub_form", clear_on_submit=False):
+            sub_keyword = st.text_input(
+                "검색 키워드", value=sub_cfg.get("keyword", "한국전력"),
+                help="매일 이 키워드로 뉴스를 수집합니다"
+            )
+            sub_days = st.selectbox(
+                "수집 기간", [1, 2, 3, 7],
+                index=[1,2,3,7].index(sub_cfg.get("days", 1)),
+                format_func=lambda x: f"최근 {x}일",
+            )
+            st.markdown("<div style='font-size:11px;font-weight:700;color:#003366;margin:8px 0 4px;'>📧 네이버 발신 계정</div>", unsafe_allow_html=True)
+            sub_sender = st.text_input(
+                "발신 이메일 (네이버)", value=sub_cfg.get("sender_email",""),
+                placeholder="yourname@naver.com"
+            )
+            sub_pw = st.text_input(
+                "네이버 앱 비밀번호", value=sub_cfg.get("sender_pw",""),
+                type="password",
+                help="네이버 > 설정 > 보안 > SMTP 비밀번호 설정 필요"
+            )
+            sub_recipients = st.text_area(
+                "수신 이메일 (쉼표 구분)", value=sub_cfg.get("recipients",""),
+                placeholder="a@example.com, b@example.com",
+                height=68
+            )
+            st.markdown("<div style='font-size:11px;font-weight:700;color:#003366;margin:8px 0 4px;'>⏰ 발송 시각 (기본: 06:30)</div>", unsafe_allow_html=True)
+            tc1, tc2 = st.columns(2)
+            with tc1:
+                sub_hour   = st.number_input("시(Hour)",   min_value=0, max_value=23, value=int(sub_cfg.get("send_hour", 6)),   step=1)
+            with tc2:
+                sub_minute = st.number_input("분(Min)",    min_value=0, max_value=59, value=int(sub_cfg.get("send_minute", 30)), step=5)
+            sub_enabled = st.checkbox("구독 활성화", value=bool(sub_cfg.get("enabled", False)))
+
+            sc1, sc2 = st.columns(2)
+            with sc1:
+                save_btn = st.form_submit_button("💾 저장", use_container_width=True)
+            with sc2:
+                test_btn = st.form_submit_button("📨 테스트 발송", use_container_width=True)
+
+        if save_btn or test_btn:
+            new_cfg = {
+                "enabled":       sub_enabled,
+                "sender_email":  sub_sender.strip(),
+                "sender_pw":     sub_pw,
+                "recipients":    sub_recipients.strip(),
+                "send_hour":     int(sub_hour),
+                "send_minute":   int(sub_minute),
+                "keyword":       sub_keyword.strip() or "한국전력",
+                "days":          int(sub_days),
+                "last_sent":     sub_cfg.get("last_sent", ""),
+            }
+            if save_sub(new_cfg):
+                apply_scheduler(new_cfg)
+                if test_btn:
+                    with st.spinner("테스트 이메일 발송 중..."):
+                        ok, msg2 = send_email_report(new_cfg)
+                    if ok:
+                        st.success(f"✅ {msg2}")
+                    else:
+                        st.error(f"❌ 발송 실패: {msg2}")
+                else:
+                    next_time = f"{int(sub_hour):02d}:{int(sub_minute):02d}"
+                    st.success(f"✅ 저장 완료 — 매일 {next_time}에 자동 발송{'됩니다' if sub_enabled else ' (비활성화 상태)'}")
+            else:
+                st.error("설정 저장 실패")
+
+        # 네이버 SMTP 설정 안내
+        st.markdown(f"""<div style='background:#FFF8E1;border-left:3px solid #F9A825;padding:8px 10px;border-radius:0 4px 4px 0;font-size:10px;color:#555;line-height:1.6;font-family:{FONT_KR};margin-top:8px;'>
+<b>📌 네이버 SMTP 설정 방법</b><br>
+네이버 로그인 → 메일 → 환경설정<br>
+→ POP3/SMTP 설정 → <b>SMTP 사용 선택</b><br>
+→ 내 정보 → 보안설정 → <b>앱 비밀번호 발급</b>
+</div>""", unsafe_allow_html=True)
+
 
 if run:
     st.session_state.active_key = None
