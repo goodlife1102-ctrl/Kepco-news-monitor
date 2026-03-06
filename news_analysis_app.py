@@ -727,7 +727,7 @@ def build_email_html(arts, df, label, period_str):
   <!-- 헤더 -->
   <div style='background:#003366;color:white;padding:20px 24px;'>
     <div style='font-size:20px;font-weight:800;'>⚡ {label} 언론보도 유형분석 리포트</div>
-    <div style='font-size:11px;opacity:.75;margin-top:5px;'>{period_str} | {now_str} 자동 발송 | 뉴스 모니터링 및 유형분석 시스템_by KEPCO</div>
+    <div style='font-size:11px;opacity:.75;margin-top:5px;'>{period_str} | {now_str} 자동 발송 | 키워드로 오늘의 뉴스 뜯어보기_by 글쓰는 여행자</div>
   </div>
 
   <!-- KPI 카드 -->
@@ -842,7 +842,7 @@ def build_email_html(arts, df, label, period_str):
 
   <!-- 푸터 -->
   <div style='background:#f8f8f8;padding:14px 24px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;'>
-    ⚡ 뉴스 모니터링 및 유형분석 시스템_by KEPCO &nbsp;|&nbsp; 네이버 뉴스 API 기반 자동 분석 &nbsp;|&nbsp; 열독률: 언론진흥재단('23)<br>
+    ⚡ 키워드로 오늘의 뉴스 뜯어보기_by 글쓰는 여행자 &nbsp;|&nbsp; 네이버 뉴스 API 기반 자동 분석 &nbsp;|&nbsp; 열독률: 언론진흥재단('23)<br>
     본 메일은 구독 설정에 따라 자동 발송되었습니다. 수신을 원하지 않으면 앱에서 구독을 해제해 주세요.
   </div>
 </div>
@@ -930,7 +930,7 @@ def build_email_html(arts, df, label, period_str):
 <div class='wrap'>
   <div class='hdr'>
     <div style='font-size:18px;font-weight:800;'>⚡ {label} 뉴스 모니터링 리포트</div>
-    <div style='font-size:11px;opacity:.75;margin-top:4px;'>{period_str} | {now_str} 발송 | 뉴스 모니터링 및 유형분석 시스템_by KEPCO</div>
+    <div style='font-size:11px;opacity:.75;margin-top:4px;'>{period_str} | {now_str} 발송 | 키워드로 오늘의 뉴스 뜯어보기_by 글쓰는 여행자</div>
   </div>
   <div class='body'>
 
@@ -985,7 +985,7 @@ def build_email_html(arts, df, label, period_str):
 
   </div>
   <div class='ftr'>
-    ⚡ 뉴스 모니터링 및 유형분석 시스템_by KEPCO &nbsp;|&nbsp; 네이버 뉴스 API 기반 자동 분석 &nbsp;|&nbsp; 열독률: 언론진흥재단('23)<br>
+    ⚡ 키워드로 오늘의 뉴스 뜯어보기_by 글쓰는 여행자 &nbsp;|&nbsp; 네이버 뉴스 API 기반 자동 분석 &nbsp;|&nbsp; 열독률: 언론진흥재단('23)<br>
     본 메일은 구독 설정에 따라 자동 발송되었습니다. 수신을 원하지 않으면 앱에서 구독을 해제해 주세요.
   </div>
 </div>
@@ -993,83 +993,91 @@ def build_email_html(arts, df, label, period_str):
     return html
 
 
-def send_email_report(cfg):
-    """네이버 SMTP로 리포트 발송 (날짜: 어제 ~ 오늘)"""
+def _collect_news_for(label, days):
+    """특정 키워드·기간으로 기사 수집 후 DataFrame 반환"""
+    end_dt   = datetime.now().date()
+    start_dt = end_dt - timedelta(days=max(1, int(days)))
+    raw = get_news(label, 1000)
+    arts = []
+    for a in raw:
+        pub = a.get("pubDate", "")
+        try:
+            ad = datetime.strptime(pub[:16], "%a, %d %b %Y").date()
+            if not (start_dt <= ad <= end_dt): continue
+            ds = ad.strftime("%Y-%m-%d"); hs = pub[17:19] if len(pub) > 18 else "00"
+        except:
+            ds = pub[:10]; hs = "00"
+        title = clean(a.get("title", "")); desc = clean(a.get("description", ""))
+        text  = title + " " + desc
+        orig  = a.get("originallink", ""); link = a.get("link", "")
+        if not is_relevant(text): continue
+        media = get_media(orig, link); gi = MEDIA_GRADE.get(media, {})
+        arts.append({"키워드그룹": label, "일자": ds, "월": ds[:7], "시간": hs,
+                     "매체": media, "등급": gi.get("grade","—"), "열독률": gi.get("rate", 0.05),
+                     "헤드라인": title, "요약": summarize(desc, 30),
+                     "감성": get_sentiment(text), "카테고리": "",
+                     "기자": "—", "링크": orig if orig else link})
+    if not arts:
+        return None, None, None
+    arts = auto_cat(arts)
+    df   = pd.DataFrame(arts)
+    period_str = f"{start_dt.strftime('%Y.%m.%d')} ~ {end_dt.strftime('%m.%d')}"
+    return arts, df, period_str
+
+
+def send_email_report(cfg, test_addr=None):
+    """구독자별 개인 키워드로 리포트 발송. test_addr 지정 시 단일 테스트 발송."""
     try:
-        end_dt   = datetime.now().date()
-        start_dt = end_dt - timedelta(days=max(1, int(cfg.get("days", 1))))
-        period_str = f"{start_dt.strftime('%Y.%m.%d')} ~ {end_dt.strftime('%m.%d')}"
-        label = cfg.get("keyword", "한국전력")
+        subs = cfg.get("subscribers", [])
+        if not subs and not test_addr:
+            return False, "구독자 없음"
 
-        # 뉴스 수집
-        raw = get_news(label, 1000)
-        arts = []
-        for a in raw:
-            pub = a.get("pubDate", "")
-            try:
-                ad = datetime.strptime(pub[:16], "%a, %d %b %Y").date()
-                if not (start_dt <= ad <= end_dt): continue
-                ds = ad.strftime("%Y-%m-%d"); hs = pub[17:19] if len(pub) > 18 else "00"
-            except:
-                ds = pub[:10]; hs = "00"
-            title = clean(a.get("title", "")); desc = clean(a.get("description", ""))
-            text = title + " " + desc
-            orig = a.get("originallink", ""); link = a.get("link", "")
-            if not is_relevant(text): continue
-            media = get_media(orig, link); gi = MEDIA_GRADE.get(media, {})
-            arts.append({"키워드그룹": label, "일자": ds, "월": ds[:7], "시간": hs,
-                         "매체": media, "등급": gi.get("grade","—"), "열독률": gi.get("rate", 0.05),
-                         "헤드라인": title, "요약": summarize(desc, 30),
-                         "감성": get_sentiment(text), "카테고리": "",
-                         "기자": "—", "링크": orig if orig else link})
-        if not arts:
-            return False, "수집된 기사 없음"
+        targets = subs if not test_addr else [
+            next((s for s in subs if s["email"] == test_addr),
+                 {"email": test_addr, "keyword": "한국전력",
+                  "send_hour": 6, "send_minute": 30})
+        ]
 
-        arts = auto_cat(arts)
-        df = pd.DataFrame(arts)
-        html_body = build_email_html(arts, df, label, period_str)
-
-        # SMTP 발송 — 수신자별 개별 발송 (다른 수신인 노출 방지)
-        raw_recipients = cfg["recipients"].replace("\n", ",").replace("\r", "")
-        recipients = [r.strip() for r in raw_recipients.split(",") if r.strip()]
-        if not recipients:
-            return False, "수신자 이메일 없음"
-
-        subject = f"[KEPCO 뉴스] {label} 언론 모니터링 리포트 — {end_dt.strftime('%Y.%m.%d')}"
         fail_list = []
-
         with smtplib.SMTP_SSL("smtp.naver.com", 465) as server:
             server.login(cfg["sender_email"], cfg["sender_pw"])
-            for addr in recipients:
+            for sub in targets:
+                label = sub.get("keyword", "한국전력")
+                days  = cfg.get("days", 1)
+                arts, df, period_str = _collect_news_for(label, days)
+                if arts is None:
+                    fail_list.append(f"{sub['email']}(기사 없음)")
+                    continue
                 try:
+                    html_body = build_email_html(arts, df, label, period_str)
+                    addr      = sub["email"]
+                    subject   = (f"[KEPCO 뉴스] {label} 모니터링 리포트 — "
+                                 f"{datetime.now().strftime('%Y.%m.%d')}")
                     msg = MIMEMultipart("alternative")
                     msg["Subject"] = subject
                     msg["From"]    = cfg["sender_email"]
-                    msg["To"]      = addr          # 본인 주소만 표시
+                    msg["To"]      = addr
                     msg.attach(MIMEText(html_body, "html", "utf-8"))
                     server.sendmail(cfg["sender_email"], [addr], msg.as_string())
                 except Exception as e:
-                    fail_list.append(f"{addr}({e})")
+                    fail_list.append(f"{sub['email']}({e})")
 
-        # 마지막 발송 시각 기록
         cfg["last_sent"] = datetime.now().strftime("%Y-%m-%d %H:%M")
         save_sub(cfg)
 
         if fail_list:
             return False, f"일부 실패: {', '.join(fail_list)}"
-        return True, f"{len(recipients)}명에게 개별 발송 완료"
+        return True, f"{len(targets)}명에게 발송 완료"
 
     except Exception as e:
         return False, str(e)
 
 
 def init_scheduler():
-    """APScheduler 싱글톤 초기화 — Streamlit 세션당 1회"""
+    """APScheduler 싱글톤 초기화"""
     if not SCHEDULER_OK:
         return None
     key = "_kepco_scheduler"
-    import streamlit.runtime.scriptrunner as sr
-    # 스레드 레벨 글로벌로 보관
     if not hasattr(st, key):
         sched = BackgroundScheduler(timezone="Asia/Seoul")
         sched.start()
@@ -1078,24 +1086,51 @@ def init_scheduler():
 
 
 def apply_scheduler(cfg):
-    """구독 설정에 맞게 스케줄러 잡 등록/갱신"""
+    """구독자별 발송 시각에 맞게 스케줄 잡 등록/갱신"""
     sched = init_scheduler()
     if sched is None:
         return
-    # 기존 잡 제거
-    if sched.get_job("kepco_daily"):
-        sched.remove_job("kepco_daily")
+    # 기존 kepco 잡 전부 제거
+    for job in sched.get_jobs():
+        if job.id.startswith("kepco_sub_"):
+            sched.remove_job(job.id)
     if not cfg.get("enabled"):
         return
-    h = int(cfg.get("send_hour", 6))
-    m = int(cfg.get("send_minute", 30))
-    sched.add_job(
-        lambda: send_email_report(load_sub()),
-        CronTrigger(hour=h, minute=m, timezone="Asia/Seoul"),
-        id="kepco_daily",
-        replace_existing=True,
-        misfire_grace_time=300,
-    )
+    # 발송 시각별로 그룹핑
+    from collections import defaultdict
+    time_groups = defaultdict(list)
+    for sub in cfg.get("subscribers", []):
+        h = int(sub.get("send_hour", 6))
+        m = int(sub.get("send_minute", 30))
+        time_groups[(h, m)].append(sub)
+    for (h, m), group in time_groups.items():
+        job_id = f"kepco_sub_{h:02d}{m:02d}"
+        def make_fn(g):
+            def fn():
+                c = load_sub()
+                try:
+                    with smtplib.SMTP_SSL("smtp.naver.com", 465) as srv:
+                        srv.login(c["sender_email"], c["sender_pw"])
+                        for sub in g:
+                            label = sub.get("keyword","한국전력")
+                            arts, df, period_str = _collect_news_for(label, c.get("days",1))
+                            if arts is None: continue
+                            html_body = build_email_html(arts, df, label, period_str)
+                            addr = sub["email"]
+                            subject = f"[KEPCO 뉴스] {label} 모니터링 리포트 — {datetime.now().strftime('%Y.%m.%d')}"
+                            msg = MIMEMultipart("alternative")
+                            msg["Subject"]=subject; msg["From"]=c["sender_email"]; msg["To"]=addr
+                            msg.attach(MIMEText(html_body,"html","utf-8"))
+                            srv.sendmail(c["sender_email"],[addr],msg.as_string())
+                    c["last_sent"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+                    save_sub(c)
+                except Exception: pass
+            return fn
+        sched.add_job(
+            make_fn(group),
+            CronTrigger(hour=h, minute=m, timezone="Asia/Seoul"),
+            id=job_id, replace_existing=True, misfire_grace_time=300
+        )
 
 
 # ── 시장 데이터 ───────────────────────────────────────
@@ -1993,16 +2028,18 @@ def render_report(cd):
     fdf['_rank'] = fdf['매체'].apply(get_media_rank)
     fdf = fdf.sort_values(['일자','_rank'], ascending=[False, True]).reset_index(drop=True)
 
-    # 컬럼별 필터 (엑셀 스타일 — 헤더 바로 위)
-    fl1,fl2,fl3,fl4 = st.columns(4)
+    # 컬럼별 필터 — 1줄 인라인
     all_dates = ["전체"]+sorted(fdf["일자"].unique().tolist(), reverse=True)
     all_media = ["전체"]+sorted(fdf["매체"].unique().tolist(), key=get_media_rank)
-    all_sent = ["전체","부정","중립","긍정"]
-    all_cat = ["전체"]+sorted(fdf["카테고리"].unique().tolist())
-    with fl1: f_date = st.selectbox("📅 일자별 필터", all_dates, key=f"fd_{label}", label_visibility="visible")
-    with fl2: f_media = st.selectbox("📰 언론사별 필터", all_media, key=f"fm_{label}", label_visibility="visible")
-    with fl3: f_sent = st.selectbox("🎨 논조별 필터", all_sent, key=f"fs_{label}", label_visibility="visible")
-    with fl4: f_cat = st.selectbox("🏷️ 카테고리별 필터", all_cat, key=f"fc_{label}", label_visibility="visible")
+    all_sent  = ["전체","부정","중립","긍정"]
+    all_cat   = ["전체"]+sorted(fdf["카테고리"].unique().tolist())
+
+    fl1, fl2, fl3, fl4 = st.columns(4)
+    with fl1: f_date  = st.selectbox("📅 일자별",    all_dates, key=f"fd_{label}", label_visibility="visible")
+    with fl2: f_media = st.selectbox("📰 언론사",    all_media, key=f"fm_{label}", label_visibility="visible")
+    with fl3: f_sent  = st.selectbox("🎨 논조",      all_sent,  key=f"fs_{label}", label_visibility="visible")
+    with fl4: f_cat   = st.selectbox("🏷️ 카테고리", all_cat,   key=f"fc_{label}", label_visibility="visible")
+
 
     if f_date!="전체": fdf=fdf[fdf["일자"]==f_date]
     if f_media!="전체": fdf=fdf[fdf["매체"]==f_media]
@@ -2044,11 +2081,11 @@ def render_report(cd):
     with dl3:
         components.html("""<button id="cpbtn" onclick="(function(){var u=window.parent.location.href;navigator.clipboard.writeText(u).then(function(){document.getElementById('cpbtn').innerText='✅ 복사됨!';document.getElementById('cpbtn').style.background='#2E7D32';setTimeout(function(){document.getElementById('cpbtn').innerText='🔗 링크 복사';document.getElementById('cpbtn').style.background='#003366';},2000);});})();" style="background:#003366;color:white;border:none;padding:8px 16px;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;width:100%;">🔗 링크 복사</button>""", height=40)
 
-    st.markdown(f"<div style='background:#003366;color:white;text-align:center;padding:7px;border-radius:4px;margin-top:10px;font-size:10px;opacity:.8;font-family:{FONT_KR};'>⚡ 뉴스 모니터링 및 유형분석 시스템_by KEPCO | {datetime.now().strftime('%Y.%m.%d')} | 열독률: 언론진흥재단('23)</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='background:#003366;color:white;text-align:center;padding:7px;border-radius:4px;margin-top:10px;font-size:10px;opacity:.8;font-family:{FONT_KR};'>⚡ 키워드로 오늘의 뉴스 뜯어보기_by 글쓰는 여행자 | {datetime.now().strftime('%Y.%m.%d')} | 열독률: 언론진흥재단('23)</div>", unsafe_allow_html=True)
     st.markdown("---")
 
 # ══ APP ═══════════════════════════════════════════════
-st.set_page_config(page_title="뉴스 모니터링 및 유형분석 시스템_by KEPCO", layout="wide", page_icon="⚡", initial_sidebar_state="expanded")
+st.set_page_config(page_title="키워드로 오늘의 뉴스 뜯어보기_by 글쓰는 여행자", layout="wide", page_icon="⚡", initial_sidebar_state="expanded")
 st.markdown(f"""<style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;800&display=swap');
 .main .block-container{{padding-top:.5rem;padding-bottom:.5rem;max-width:1400px;}}
@@ -2070,7 +2107,7 @@ if "_sub_loaded" not in st.session_state:
 
 if not YF_OK: st.warning("📦 주가: pip install yfinance 실행 필요", icon="⚠️")
 md = get_market_data()
-st.markdown(f"""<div style='background:#003366;color:white;padding:8px 16px;border-radius:5px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-family:{FONT_KR};'><span style='font-size:15px;font-weight:700;'>⚡ 뉴스 모니터링 및 유형분석 시스템_by KEPCO</span><span style='font-size:8px;opacity:.65;'>{datetime.now().strftime('%Y.%m.%d')} | 열독률 등급 기반 | 네이버 뉴스 API</span></div>""", unsafe_allow_html=True)
+st.markdown(f"""<div style='background:#003366;color:white;padding:8px 16px;border-radius:5px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-family:{FONT_KR};'><span style='font-size:15px;font-weight:700;'>⚡ 키워드로 오늘의 뉴스 뜯어보기_by 글쓰는 여행자</span><span style='font-size:8px;opacity:.65;'>{datetime.now().strftime('%Y.%m.%d')} | 열독률 등급 기반 | 네이버 뉴스 API</span></div>""", unsafe_allow_html=True)
 st.markdown(mhdr(md), unsafe_allow_html=True)
 
 with st.sidebar:
@@ -2099,22 +2136,37 @@ with st.sidebar:
 
     # ══ 구독 알리미 UI ══
     st.markdown("---")
-    sub_cfg = load_sub()
+    sub_cfg     = load_sub()
+    subs        = sub_cfg.get("subscribers", [])
     status_icon = "🟢" if sub_cfg.get("enabled") else "⚫"
     last_sent   = sub_cfg.get("last_sent", "")
     last_txt    = f"마지막 발송: {last_sent}" if last_sent else "아직 발송 없음"
-    ADMIN_PW    = "kepco2025"   # ← 관리자 비밀번호 (여기서 변경)
+    ADMIN_PW    = "kepco2025"
 
     with st.expander(f"{status_icon} 뉴스 알리미 구독", expanded=False):
-        st.markdown(f"<div style='font-size:10px;color:#888;margin-bottom:10px;font-family:{FONT_KR};'>{last_txt}</div>", unsafe_allow_html=True)
+        st.markdown(
+            f"<div style='font-size:10px;color:#888;margin-bottom:10px;font-family:{FONT_KR};'>"
+            f"{last_txt} | 현재 구독자 {len(subs)}명</div>",
+            unsafe_allow_html=True
+        )
 
-        # ══ [일반] 구독 신청 / 해제 ══
-        st.markdown(f"<div style='font-size:12px;font-weight:800;color:#003366;margin-bottom:6px;font-family:{FONT_KR};'>📬 구독 신청 / 해제</div>", unsafe_allow_html=True)
-
+        # ── [일반] 구독 신청 / 해제 ──
+        st.markdown(
+            f"<div style='font-size:12px;font-weight:800;color:#003366;margin-bottom:6px;"
+            f"font-family:{FONT_KR};'>📬 구독 신청 / 해제</div>",
+            unsafe_allow_html=True
+        )
         with st.form("user_sub_form", clear_on_submit=True):
-            user_email = st.text_input("내 이메일", placeholder="my@email.com", label_visibility="collapsed")
+            user_email  = st.text_input("내 이메일", placeholder="my@email.com", label_visibility="collapsed")
+            user_kw     = st.text_input("받고 싶은 키워드", value="한국전력", help="예: 한국전력, 원전, 전기요금")
+            uh1, uh2    = st.columns(2)
+            with uh1:
+                user_hour   = st.number_input("발송 시각 (0~23시)", min_value=0, max_value=23, value=6, step=1)
+            with uh2:
+                user_minute = st.selectbox("발송 분", [0, 10, 20, 30, 40, 50], index=3,
+                                           format_func=lambda x: f"{x:02d}분")
             uc1, uc2 = st.columns(2)
-            with uc1: sub_btn  = st.form_submit_button("구독 신청", use_container_width=True)
+            with uc1: sub_btn   = st.form_submit_button("구독 신청", use_container_width=True)
             with uc2: unsub_btn = st.form_submit_button("구독 해제", use_container_width=True)
 
         if sub_btn or unsub_btn:
@@ -2122,106 +2174,146 @@ with st.sidebar:
             if not addr or "@" not in addr:
                 st.error("올바른 이메일 주소를 입력해 주세요.")
             else:
-                cur_raw = sub_cfg.get("recipients", "")
-                cur_list = [r.strip().lower() for r in cur_raw.replace("\n",",").split(",") if r.strip()]
+                fresh      = load_sub()
+                fresh_subs = fresh.get("subscribers", [])
+                emails     = [s["email"].lower() for s in fresh_subs]
                 if sub_btn:
-                    if addr in cur_list:
-                        st.warning(f"{addr} 은(는) 이미 구독 중입니다.")
+                    if addr in emails:
+                        for s in fresh_subs:
+                            if s["email"].lower() == addr:
+                                s["keyword"]     = user_kw.strip() or "한국전력"
+                                s["send_hour"]   = int(user_hour)
+                                s["send_minute"] = int(user_minute)
+                        fresh["subscribers"] = fresh_subs
+                        save_sub(fresh); apply_scheduler(fresh)
+                        st.success(f"✅ {addr} 설정 업데이트 완료!")
                     else:
-                        cur_list.append(addr)
-                        sub_cfg["recipients"] = ", ".join(cur_list)
-                        save_sub(sub_cfg)
-                        st.success(f"✅ {addr} 구독 신청 완료!")
+                        fresh_subs.append({
+                            "email":       addr,
+                            "keyword":     user_kw.strip() or "한국전력",
+                            "send_hour":   int(user_hour),
+                            "send_minute": int(user_minute),
+                            "joined_at":   datetime.now().strftime("%Y-%m-%d %H:%M"),
+                        })
+                        fresh["subscribers"] = fresh_subs
+                        save_sub(fresh); apply_scheduler(fresh)
+                        st.success(
+                            f"✅ 구독 완료! 매일 {int(user_hour):02d}:{int(user_minute):02d}에 "
+                            f"[{user_kw}] 뉴스 리포트를 보내드립니다."
+                        )
                 else:
-                    if addr not in cur_list:
+                    if addr not in emails:
                         st.warning(f"{addr} 은(는) 구독 목록에 없습니다.")
                     else:
-                        cur_list.remove(addr)
-                        sub_cfg["recipients"] = ", ".join(cur_list)
-                        save_sub(sub_cfg)
+                        fresh_subs = [s for s in fresh_subs if s["email"].lower() != addr]
+                        fresh["subscribers"] = fresh_subs
+                        save_sub(fresh); apply_scheduler(fresh)
                         st.success(f"✅ {addr} 구독 해제 완료.")
 
-        st.markdown("<div style='height:6px;'></div>", unsafe_allow_html=True)
-        st.markdown(f"<div style='font-size:10px;color:#aaa;font-family:{FONT_KR};'>구독하면 매일 아침 한국전력 뉴스 리포트가 발송됩니다.</div>", unsafe_allow_html=True)
+        st.markdown(
+            f"<div style='font-size:10px;color:#aaa;font-family:{FONT_KR};margin-top:4px;'>"
+            "이미 구독 중이라면 신청 시 키워드·시각이 업데이트됩니다.</div>",
+            unsafe_allow_html=True
+        )
 
-        # ══ [관리자] 발신 계정·발송 시각 설정 ══
+        # ── [관리자] 발신 계정·구독자 관리 ──
         st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
-        st.markdown(f"<div style='font-size:12px;font-weight:800;color:#555;margin-bottom:6px;font-family:{FONT_KR};'>🔒 관리자 설정</div>", unsafe_allow_html=True)
-
+        st.markdown(
+            f"<div style='font-size:12px;font-weight:800;color:#555;margin-bottom:6px;"
+            f"font-family:{FONT_KR};'>🔒 관리자 설정</div>",
+            unsafe_allow_html=True
+        )
         if "sub_admin_ok" not in st.session_state:
             st.session_state.sub_admin_ok = False
 
         if not st.session_state.sub_admin_ok:
             with st.form("admin_gate_form", clear_on_submit=True):
                 entered_pw = st.text_input("관리자 비밀번호", type="password", placeholder="비밀번호 입력")
-                gate_btn = st.form_submit_button("잠금 해제", use_container_width=True)
+                gate_btn   = st.form_submit_button("잠금 해제", use_container_width=True)
             if gate_btn:
                 if entered_pw == ADMIN_PW:
-                    st.session_state.sub_admin_ok = True
-                    st.rerun()
+                    st.session_state.sub_admin_ok = True; st.rerun()
                 else:
                     st.error("비밀번호가 올바르지 않습니다.")
         else:
-            col_unlock, _ = st.columns([1,2])
-            with col_unlock:
+            cl1, _ = st.columns([1, 2])
+            with cl1:
                 if st.button("🔒 잠금", key="sub_lock_btn", use_container_width=True):
-                    st.session_state.sub_admin_ok = False
-                    st.rerun()
+                    st.session_state.sub_admin_ok = False; st.rerun()
 
-            # 현재 구독자 수 표시
-            cur_raw2 = sub_cfg.get("recipients","")
-            cur_list2 = [r.strip() for r in cur_raw2.replace("\n",",").split(",") if r.strip()]
-            st.markdown(f"<div style='font-size:11px;color:#2E7D32;font-weight:700;margin:6px 0;font-family:{FONT_KR};'>현재 구독자 {len(cur_list2)}명</div>", unsafe_allow_html=True)
+            adm     = load_sub()
+            adm_subs = adm.get("subscribers", [])
+            if adm_subs:
+                st.markdown(
+                    f"<div style='font-size:11px;font-weight:700;color:#003366;margin:8px 0 4px;"
+                    f"font-family:{FONT_KR};'>구독자 목록 ({len(adm_subs)}명)</div>",
+                    unsafe_allow_html=True
+                )
+                rows = "".join(
+                    f"<tr style='border-bottom:1px solid #f0f0f0;font-size:11px;'>"
+                    f"<td style='padding:4px 6px;'>{s['email']}</td>"
+                    f"<td style='padding:4px 6px;color:#003366;font-weight:700;'>{s.get('keyword','한국전력')}</td>"
+                    f"<td style='padding:4px 6px;color:#555;'>{s.get('send_hour',6):02d}:{s.get('send_minute',30):02d}</td>"
+                    f"</tr>"
+                    for s in adm_subs
+                )
+                st.markdown(
+                    f"<table style='width:100%;border-collapse:collapse;font-family:{FONT_KR};'>"
+                    f"<thead><tr style='background:#003366;color:white;font-size:10px;'>"
+                    f"<th style='padding:5px 6px;text-align:left;'>이메일</th>"
+                    f"<th style='padding:5px 6px;'>키워드</th>"
+                    f"<th style='padding:5px 6px;'>발송시각</th></tr></thead>"
+                    f"<tbody>{rows}</tbody></table>",
+                    unsafe_allow_html=True
+                )
+            else:
+                st.caption("구독자 없음")
 
             with st.form("sub_form", clear_on_submit=False):
-                sub_keyword = st.text_input("검색 키워드", value=sub_cfg.get("keyword","한국전력"))
-                sub_days = st.selectbox("수집 기간", [1,2,3,7],
-                    index=[1,2,3,7].index(sub_cfg.get("days",1)),
-                    format_func=lambda x: f"최근 {x}일")
-                st.markdown(f"<div style='font-size:11px;font-weight:700;color:#003366;margin:8px 0 4px;font-family:{FONT_KR};'>네이버 발신 계정</div>", unsafe_allow_html=True)
-                sub_sender = st.text_input("발신 이메일 (네이버)", value=sub_cfg.get("sender_email",""), placeholder="yourname@naver.com")
-                sub_pw     = st.text_input("네이버 앱 비밀번호", value=sub_cfg.get("sender_pw",""), type="password")
-                sub_recipients = st.text_area("수신 이메일 전체 목록", value=sub_cfg.get("recipients",""), height=80,
-                    help="쉼표로 구분. 구독 신청/해제로 자동 업데이트됩니다.")
-                st.markdown(f"<div style='font-size:11px;font-weight:700;color:#003366;margin:8px 0 4px;font-family:{FONT_KR};'>발송 시각 설정 (기본: 06:30)</div>", unsafe_allow_html=True)
-                tc1, tc2 = st.columns(2)
-                with tc1: sub_hour   = st.number_input("시", min_value=0, max_value=23, value=int(sub_cfg.get("send_hour",6)),   step=1)
-                with tc2: sub_minute = st.number_input("분", min_value=0, max_value=59, value=int(sub_cfg.get("send_minute",30)), step=5)
-                sub_enabled = st.checkbox("구독 활성화", value=bool(sub_cfg.get("enabled",False)))
-                sc1, sc2 = st.columns(2)
-                with sc1: save_btn = st.form_submit_button("저장", use_container_width=True)
-                with sc2: test_btn = st.form_submit_button("테스트 발송", use_container_width=True)
+                sub_days = st.selectbox(
+                    "수집 기간", [1, 2, 3, 7],
+                    index=[1,2,3,7].index(adm.get("days", 1)),
+                    format_func=lambda x: f"최근 {x}일"
+                )
+                st.markdown(
+                    f"<div style='font-size:11px;font-weight:700;color:#003366;margin:8px 0 4px;"
+                    f"font-family:{FONT_KR};'>네이버 발신 계정</div>",
+                    unsafe_allow_html=True
+                )
+                sub_sender  = st.text_input("발신 이메일 (네이버)", value=adm.get("sender_email",""), placeholder="yourname@naver.com")
+                sub_pw      = st.text_input("네이버 앱 비밀번호", value=adm.get("sender_pw",""), type="password")
+                sub_enabled = st.checkbox("구독 활성화", value=bool(adm.get("enabled", False)))
+                as1, as2    = st.columns(2)
+                with as1: save_btn = st.form_submit_button("저장", use_container_width=True)
+                with as2: test_btn = st.form_submit_button("테스트 발송", use_container_width=True)
 
             if save_btn or test_btn:
-                new_cfg = {
+                adm.update({
                     "enabled":      sub_enabled,
                     "sender_email": sub_sender.strip(),
                     "sender_pw":    sub_pw,
-                    "recipients":   sub_recipients.strip(),
-                    "send_hour":    int(sub_hour),
-                    "send_minute":  int(sub_minute),
-                    "keyword":      sub_keyword.strip() or "한국전력",
                     "days":         int(sub_days),
-                    "last_sent":    sub_cfg.get("last_sent",""),
-                }
-                if save_sub(new_cfg):
-                    apply_scheduler(new_cfg)
+                })
+                if save_sub(adm):
+                    apply_scheduler(adm)
                     if test_btn:
-                        with st.spinner("테스트 이메일 발송 중..."):
-                            ok, msg2 = send_email_report(new_cfg)
+                        with st.spinner("테스트 발송 중..."):
+                            ok, msg2 = send_email_report(adm, test_addr=adm["sender_email"])
                         if ok: st.success(f"✅ {msg2}")
-                        else:  st.error(f"❌ 발송 실패: {msg2}")
+                        else:  st.error(f"❌ {msg2}")
                     else:
-                        next_time = f"{int(sub_hour):02d}:{int(sub_minute):02d}"
-                        st.success(f"✅ 저장 완료 — 매일 {next_time} 자동 발송{'됩니다' if sub_enabled else ' (비활성화)'}")
+                        st.success(f"✅ 저장 완료 — {'구독 활성화' if sub_enabled else '비활성화 상태'}")
                 else:
-                    st.error("설정 저장 실패")
+                    st.error("저장 실패")
 
-            st.markdown(f"""<div style='background:#FFF8E1;border-left:3px solid #F9A825;padding:8px 10px;border-radius:0 4px 4px 0;font-size:10px;color:#555;line-height:1.6;font-family:{FONT_KR};margin-top:8px;'>
-<b>네이버 SMTP 설정 방법</b><br>
-네이버 메일 → 환경설정 → POP3/SMTP → SMTP 사용 선택<br>
-내 정보 → 보안설정 → 앱 비밀번호 발급
-</div>""", unsafe_allow_html=True)
+            st.markdown(
+                f"<div style='background:#FFF8E1;border-left:3px solid #F9A825;padding:8px 10px;"
+                f"border-radius:0 4px 4px 0;font-size:10px;color:#555;line-height:1.6;"
+                f"font-family:{FONT_KR};margin-top:8px;'>"
+                "네이버 메일 → 환경설정 → POP3/SMTP → SMTP 사용 선택<br>"
+                "내 정보 → 보안설정 → 앱 비밀번호 발급</div>",
+                unsafe_allow_html=True
+            )
 
 
 if run:
@@ -2299,4 +2391,4 @@ else:
                 if st.button("열람", key=f"v_{i}", use_container_width=True):
                     st.session_state.active_key=h['cache_key']; st.rerun()
     else:
-        st.markdown(f"""<div style='text-align:center;padding:50px;color:#aaa;font-family:{FONT_KR};'><div style='font-size:32px;'>⚡</div><div style='font-size:15px;font-weight:600;color:#003366;margin-top:8px;'>뉴스 모니터링 및 유형분석 시스템_by KEPCO</div><div style='font-size:12px;margin-top:6px;'>좌측 키워드 입력 후 🚀 클릭</div></div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div style='text-align:center;padding:50px;color:#aaa;font-family:{FONT_KR};'><div style='font-size:32px;'>⚡</div><div style='font-size:15px;font-weight:600;color:#003366;margin-top:8px;'>키워드로 오늘의 뉴스 뜯어보기_by 글쓰는 여행자</div><div style='font-size:12px;margin-top:6px;'>좌측 키워드 입력 후 🚀 클릭</div></div>""", unsafe_allow_html=True)
