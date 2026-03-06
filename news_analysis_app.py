@@ -441,58 +441,98 @@ def _extract_core_issue(headlines):
     return ", ".join(keywords) if keywords else "", found
 
 
+# ── 카테고리별 고정 전략 테이블 (카테고리가 1차 기준) ──────────────
+_CAT_STRATEGY = {
+    "전기요금": {
+        "action_tpl": "{kw} 관련 원가·지원 실적 팩트시트 즉시 배포",
+        "msg":    "요금 이슈는 감정이 아닌 숫자로 설득해야 한다. 원가회수율·지원 가구 수 구체 수치가 설득의 무기다.",
+        "steps":  ["원가회수율·지원 가구 수 수치화 자료 즉시 배포", "취약계층 지원 성과 스토리 발굴·배포", "핵심 매체 1:1 설명회 개최"],
+    },
+    "재무·경영": {
+        "action_tpl": "{kw} 개선 지표 — 전기 대비 변화폭 중심 선제 공개",
+        "msg":    "재무 보도에는 '얼마나 줄었나'를 먼저 말해야 한다. 과거 대비 개선폭이 핵심이다.",
+        "steps":  ["부채 감축·효율화 실적 정량 보도자료 발표", "경영 효율화 구체 사례 스토리텔링", "경제지 전담 기자 관계 집중 강화"],
+    },
+    "노사관계": {
+        "action_tpl": "협상 현황 정기 브리핑으로 {kw} 관련 루머 선제 차단",
+        "msg":    "파업·갈등 보도는 공공서비스 불안으로 프레임이 전환된다. 침묵은 최악이다.",
+        "steps":  ["협상 진행 상황 주 1회 정기 브리핑 실시", "공공서비스 정상 유지 메시지 선점", "노사 공동 성명 또는 협의 시그널 제공"],
+    },
+    "안전·사고": {
+        "action_tpl": "{kw} 관련 사고 원인·재발방지책 48시간 내 공식 발표",
+        "msg":    "안전 이슈는 '얼마나 빨리, 얼마나 구체적으로' 대응하느냐가 2차 피해를 막는다.",
+        "steps":  ["사고 원인 및 재발방지책 48시간 내 발표", "현장 안전 투자 금액·건수 데이터 동시 제공", "협력업체 포함 안전망 확대 조치 공표"],
+    },
+    "전력망·설비": {
+        "action_tpl": "{kw} 설비 현대화 로드맵·투자 계획 수치 중심 공개",
+        "msg":    "'문제 있다'는 언론보다 '우리가 먼저 알고 고치고 있다'는 메시지가 우선이다.",
+        "steps":  ["투자 계획·진행 현황 수치 중심 보도자료", "정전 원인 신속 공개 및 복구 타임라인 제시", "스마트그리드·디지털 전환 성과 홍보"],
+    },
+    "탄소중립·에너지전환": {
+        "action_tpl": "{kw} 관련 온실가스 감축 실적·재생에너지 투자 정량 공개",
+        "msg":    "추상적 목표보다 '작년 대비 몇% 줄었다'는 구체 숫자가 신뢰를 만든다.",
+        "steps":  ["온실가스 감축 실적 정량 공개", "재생에너지 투자·발전량 구체 수치 제시", "국제 협약 대비 성과 비교 자료 제공"],
+    },
+    "공기업·거버넌스": {
+        "action_tpl": "{kw} 관련 감사 결과 자진 공개 및 재발방지 조치 발표",
+        "msg":    "비리·특혜 의혹은 숨기면 더 크게 터진다. 먼저 공개하는 것이 신뢰 회복의 시작이다.",
+        "steps":  ["감사 결과 자진 공개로 선제 대응", "구체적 윤리경영 조치 언론 제공", "외부 제3자 검증 활용으로 신뢰성 확보"],
+    },
+    "정책·규제": {
+        "action_tpl": "{kw} 관련 법무팀 공식 입장 24시간 내 발표 및 사실관계 선제 공개",
+        "msg":    "'법적 대응'보다 '적극 협조·투명하게 소명' 메시지가 여론에 유리하다.",
+        "steps":  ["법무팀 공식 입장 즉시 발표", "사실 관계 오보 정정 요청 적극 집행", "조사 협조 의지·투명성 강조 메시지 선점"],
+    },
+    "원전·수출": {
+        "action_tpl": "{kw} 관련 계약·협상 진행 상황 정기 업데이트 공개",
+        "msg":    "불확실성이 비판을 낳는다. 원전 수출 관련 알려줄 수 있는 정보는 먼저 알려라.",
+        "steps":  ["계약·협상 진행 상황 정기 업데이트", "안전 기준·국제 인증 현황 구체 자료 제공", "기존 수출 성공 사례 집중 레퍼런스화"],
+    },
+    "AI·디지털혁신": {
+        "action_tpl": "{kw} 도입 전후 효율 지표 수치 비교 보도자료 배포",
+        "msg":    "'AI 도입'이 아니라 '덕분에 이렇게 달라졌다'는 Before-After 스토리가 효과적이다.",
+        "steps":  ["AI 도입 전후 효율 지표 수치 비교 자료", "구체적 서비스 개선 사례(응답시간·오류율) 제시", "보안·개인정보 보호 조치 별도 홍보"],
+    },
+    "고객·서비스": {
+        "action_tpl": "{kw} 관련 민원 처리 현황 공개 및 개선 로드맵 발표",
+        "msg":    "민원 통계보다 '실제 해결된 사람의 이야기'가 언론에 더 잘 먹힌다.",
+        "steps":  ["민원 처리 속도·만족도 지표 공개", "해결 사례 스토리 발굴 및 배포", "24시간 대응 체계 구축 사실 홍보"],
+    },
+}
+
 def _build_dynamic_insight(cat, headlines, found_issues, label):
-    """기사 내용을 바탕으로 구체적 To-Be 제안 동적 생성"""
+    """카테고리 1차 기준 + 기사 핵심키워드로 문장 보강하는 To-Be 생성"""
     db_base  = INSIGHT_DB.get(cat, DEFAULT_INSIGHT)
     core_kw, _ = _extract_core_issue(headlines)
-    kw = f"'{core_kw}'" if core_kw else "해당 이슈"
+    kw = core_kw if core_kw else label[:8]   # 핵심 키워드 없으면 이슈 제목 앞부분 사용
 
-    if "수사·법적 리스크" in found_issues:
-        action = f"법무팀 공식 입장 24시간 내 발표 — {kw} 관련 사실관계 선제 공개"
-        msg    = f"{kw} 보도가 수사·법적 이슈로 확산되기 전, 먼저 입장을 내는 쪽이 여론을 선점한다."
-        steps  = ["사실관계 확인 즉시 공식 입장 발표", "법적 대응보다 '적극 협조·투명 소명' 메시지 우선", "언론사별 1:1 팩트 브리핑 실시"]
-    elif "노사 갈등" in found_issues:
-        action = f"협상 현황 정기 브리핑으로 {kw} 관련 루머 선제 차단"
-        msg    = f"파업·갈등 보도는 공공서비스 불안으로 프레임이 전환된다. {kw} 이슈는 침묵이 최악이다."
-        steps  = ["협상 진행 상황 주 1회 정기 브리핑 실시", "공공서비스 정상 유지 메시지 선점", "노사 공동 성명 또는 협의 시그널 제공"]
-    elif "요금 인상 부담" in found_issues:
-        action = f"{kw} 보도 대응 — 원가·지원 실적 팩트시트 즉시 배포"
-        msg    = f"요금 이슈는 감정이 아닌 숫자로 설득해야 한다. {kw} 관련 구체 수치가 설득의 무기다."
-        steps  = ["원가회수율·지원 가구 수 수치화 자료 즉시 배포", "취약계층 지원 성과 스토리 발굴·배포", "핵심 매체 1:1 설명회 개최"]
-    elif "안전사고" in found_issues:
-        action = f"{kw} 관련 사고 원인·재발방지책 48시간 내 공식 발표"
-        msg    = f"안전 이슈는 '얼마나 빨리, 얼마나 구체적으로' 대응하느냐가 2차 피해를 막는다."
-        steps  = ["사고 원인 및 재발방지책 48시간 내 발표", "현장 안전 투자 데이터 동시 제공", "협력업체 포함 안전망 확대 조치 공표"]
-    elif "재무 악화" in found_issues:
-        action = f"{kw} 관련 개선 지표 — 전기 대비 변화폭 중심 선제 공개"
-        msg    = f"재무 보도에는 '얼마나 줄었나'를 먼저 말해야 한다. 과거 대비 개선폭이 핵심이다."
-        steps  = ["부채 감축·효율화 실적 정량 보도자료 발표", "경영 효율화 구체 사례 스토리텔링", "경제지 전담 기자 관계 집중 강화"]
-    elif "비위·도덕성" in found_issues:
-        action = f"{kw} 의혹 관련 감사 결과 자진 공개 및 재발방지 조치 발표"
-        msg    = f"비리·특혜 의혹은 숨기면 더 크게 터진다. 먼저 공개하는 것이 신뢰 회복의 시작이다."
-        steps  = ["감사 결과 자진 공개로 선제 대응", "구체적 윤리경영 조치 언론 제공", "외부 제3자 검증 활용으로 신뢰성 확보"]
-    elif "사업 차질" in found_issues:
-        action = f"{kw} 지연 이슈 — 진행 현황 정기 업데이트로 불확실성 해소"
-        msg    = f"불확실성이 비판을 낳는다. {kw} 관련 알려줄 수 있는 정보는 먼저 알려라."
-        steps  = ["사업 진행 현황 정기 업데이트 발표", "지연 원인과 수정 일정 구체 공개", "대안·보완책 동시 발표로 신뢰 유지"]
-    elif "여론 악화" in found_issues:
-        action = f"{kw} 관련 민원·불만 처리 현황 공개 및 개선 로드맵 발표"
-        msg    = f"민원 통계보다 '실제 해결된 사람의 이야기'가 언론에 더 잘 먹힌다."
-        steps  = ["민원 처리 속도·만족도 지표 공개", "해결 사례 스토리 발굴 및 배포", "24시간 대응 체계 구축 사실 홍보"]
-    elif "인사 논란" in found_issues:
-        action = f"{kw} 관련 인사 원칙·기준 투명 공개 및 전문성 검증 자료 제공"
-        msg    = f"인사 논란은 '왜 이 사람인가'에 대한 구체 근거로만 막을 수 있다."
-        steps  = ["인사 원칙·선발 기준 투명 공개", "해당 인사의 전문성·경력 구체 자료 제공", "이사회·외부위원회 검증 절차 강조"]
+    # 카테고리가 테이블에 있으면 무조건 그 전략 사용 (중복 방지의 핵심)
+    if cat in _CAT_STRATEGY:
+        tpl = _CAT_STRATEGY[cat]
+        action = tpl["action_tpl"].replace("{kw}", kw)
+        msg    = tpl["msg"]
+        steps  = list(tpl["steps"])
+
+        # 헤드라인 패턴으로 추가 보강 (동일 카테고리라도 기사 내용이 다르면 action 앞에 컨텍스트 추가)
+        if "수사·법적 리스크" in found_issues and cat not in ("정책·규제", "공기업·거버넌스"):
+            action = f"[수사 대응 긴급] {action}"
+        elif "안전사고" in found_issues and cat != "안전·사고":
+            action = f"[안전 우선] {action}"
+
     else:
-        # 기사 키워드 기반 fallback
-        if core_kw:
-            action = f"{kw} 이슈 공식 입장 48시간 내 발표 및 담당 창구 일원화"
-            msg    = f"{kw} 관련 언론 보도에는 먼저, 빠르게, 구체적으로 대응하는 것이 원칙이다."
-            steps  = [f"{kw} 관련 공식 입장 즉시 발표", "담당 부서 창구 일원화", "미디어 대응 매뉴얼 사전 준비"]
+        # 기타 카테고리 — found_issues 로 분기
+        if "수사·법적 리스크" in found_issues:
+            action = f"'{kw}' 관련 법무팀 공식 입장 24시간 내 발표"
+            msg    = f"'{kw}' 보도가 수사·법적 이슈로 확산되기 전, 먼저 입장을 내는 쪽이 여론을 선점한다."
+            steps  = ["사실관계 확인 즉시 공식 입장 발표", "언론사별 1:1 팩트 브리핑 실시", "담당 부서 창구 일원화"]
+        elif "여론 악화" in found_issues:
+            action = f"'{kw}' 관련 민원·불만 처리 현황 공개 및 개선 로드맵 발표"
+            msg    = f"민원 통계보다 '실제 해결된 사람의 이야기'가 언론에 더 잘 먹힌다."
+            steps  = ["민원 처리 속도·만족도 지표 공개", "해결 사례 스토리 발굴 및 배포", "24시간 대응 체계 구축 사실 홍보"]
         else:
-            action = db_base.get("action", DEFAULT_INSIGHT["action"])
-            msg    = db_base.get("msg",    DEFAULT_INSIGHT["msg"])
-            steps  = db_base.get("steps",  DEFAULT_INSIGHT["steps"])
+            action = f"'{kw}' 이슈 공식 입장 48시간 내 발표 및 담당 창구 일원화"
+            msg    = f"'{kw}' 관련 언론 보도에는 먼저, 빠르게, 구체적으로 대응하는 것이 원칙이다."
+            steps  = [f"'{kw}' 관련 공식 입장 즉시 발표", "담당 부서 창구 일원화", "미디어 대응 매뉴얼 사전 준비"]
 
     return {
         "bg":     db_base.get("bg", ""),
@@ -503,14 +543,33 @@ def _build_dynamic_insight(cat, headlines, found_issues, label):
 
 
 def gen_paired_insights(criticisms):
-    """기사 헤드라인 분석 기반 동적 To-Be 인사이트 생성"""
-    result = []
+    """기사 헤드라인 분석 기반 동적 To-Be 인사이트 생성 (카테고리별 중복 없음)"""
+    result      = []
+    used_cats   = set()   # 동일 카테고리 재사용 방지 (fallback 포함)
+    used_actions = set()  # 동일 action 문구 재사용 방지
+
     for c in criticisms:
         cat       = c.get("category", c["title"])
         headlines = c.get("headlines", [])
         label     = c.get("title", cat)
         _, found_issues = _extract_core_issue(headlines)
         db = _build_dynamic_insight(cat, headlines, found_issues, label)
+
+        # 혹시 같은 action이 나오면 카테고리 DB에서 직접 꺼내 덮어씀
+        action_key = db["action"][:20]
+        if action_key in used_actions:
+            fallback_db = INSIGHT_DB.get(cat, DEFAULT_INSIGHT)
+            core_kw, _ = _extract_core_issue(headlines)
+            kw = core_kw if core_kw else label[:8]
+            db = {
+                "bg":     fallback_db.get("bg", ""),
+                "action": f"[{cat}] {kw} 관련 {fallback_db.get('action', DEFAULT_INSIGHT['action'])}",
+                "msg":    fallback_db.get("msg", DEFAULT_INSIGHT["msg"]),
+                "steps":  fallback_db.get("steps", DEFAULT_INSIGHT["steps"]),
+            }
+
+        used_cats.add(cat)
+        used_actions.add(db["action"][:20])
         result.append({"criticism": c, "db": db})
     return result
 
