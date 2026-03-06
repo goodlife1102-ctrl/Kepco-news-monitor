@@ -1325,16 +1325,104 @@ def apply_scheduler(cfg):
 
 
 # ── 시장 데이터 ───────────────────────────────────────
+# ── 잘 알려진 상장사 → 티커 빠른 매핑 (네트워크 없이도 동작) ──
+_KNOWN_TICKERS = {
+    "한국전력": ("한국전력", "015760.KS"),
+    "한전": ("한국전력", "015760.KS"),
+    "삼성전자": ("삼성전자", "005930.KS"),
+    "SK하이닉스": ("SK하이닉스", "000660.KS"),
+    "현대차": ("현대자동차", "005380.KS"),
+    "현대자동차": ("현대자동차", "005380.KS"),
+    "LG에너지솔루션": ("LG에너지솔루션", "373220.KS"),
+    "삼성바이오로직스": ("삼성바이오로직스", "207940.KS"),
+    "셀트리온": ("셀트리온", "068270.KS"),
+    "POSCO홀딩스": ("POSCO홀딩스", "005490.KS"),
+    "포스코": ("POSCO홀딩스", "005490.KS"),
+    "LG화학": ("LG화학", "051910.KS"),
+    "KB금융": ("KB금융", "105560.KS"),
+    "신한지주": ("신한지주", "055550.KS"),
+    "하나금융지주": ("하나금융지주", "086790.KS"),
+    "기아": ("기아", "000270.KS"),
+    "카카오": ("카카오", "035720.KS"),
+    "네이버": ("NAVER", "035420.KS"),
+    "NAVER": ("NAVER", "035420.KS"),
+    "현대모비스": ("현대모비스", "012330.KS"),
+    "삼성SDI": ("삼성SDI", "006400.KS"),
+    "LG전자": ("LG전자", "066570.KS"),
+    "고려아연": ("고려아연", "010130.KS"),
+    "삼성물산": ("삼성물산", "028260.KS"),
+    "두산에너빌리티": ("두산에너빌리티", "034020.KS"),
+    "한국가스공사": ("한국가스공사", "036460.KS"),
+    "한국수력원자력": ("한국수력원자력", ""),  # 비상장
+    "카카오뱅크": ("카카오뱅크", "323410.KS"),
+    "크래프톤": ("크래프톤", "259960.KS"),
+    "한국항공우주": ("한국항공우주", "047810.KS"),
+    "에코프로비엠": ("에코프로비엠", "247540.KQ"),
+    "에코프로": ("에코프로", "086520.KQ"),
+    "엔씨소프트": ("엔씨소프트", "036570.KS"),
+    "넷마블": ("넷마블", "251270.KS"),
+    "카카오게임즈": ("카카오게임즈", "293490.KQ"),
+    "HMM": ("HMM", "011200.KS"),
+    "한진칼": ("한진칼", "180640.KS"),
+    "대한항공": ("대한항공", "003490.KS"),
+    "롯데케미칼": ("롯데케미칼", "011170.KS"),
+    "SK이노베이션": ("SK이노베이션", "096770.KS"),
+    "SKT": ("SK텔레콤", "017670.KS"),
+    "SK텔레콤": ("SK텔레콤", "017670.KS"),
+    "KT": ("KT", "030200.KS"),
+    "LGU+": ("LG유플러스", "032640.KS"),
+    "LG유플러스": ("LG유플러스", "032640.KS"),
+    "NH투자증권": ("NH투자증권", "005940.KS"),
+    "미래에셋증권": ("미래에셋증권", "006800.KS"),
+    "삼성증권": ("삼성증권", "016360.KS"),
+    "하이브": ("하이브", "352820.KS"),
+    "CJ ENM": ("CJ ENM", "035760.KQ"),
+    "한화에어로스페이스": ("한화에어로스페이스", "012450.KS"),
+    "한화솔루션": ("한화솔루션", "009830.KS"),
+}
+
 @st.cache_data(ttl=86400)
 def lookup_krx_ticker(company_name):
-    """회사명으로 KRX 티커 자동검색 (코스피 우선, 없으면 코스닥)"""
+    """회사명으로 KRX 티커 자동검색.
+    1순위: 내장 매핑 테이블 (네트워크 불필요)
+    2순위: 네이버 증권 자동완성 API
+    3순위: KRX KIND API"""
     if not company_name:
         return "", ""
+    q = company_name.strip()
+
+    # ── 1순위: 내장 매핑 ──
+    if q in _KNOWN_TICKERS:
+        name, ticker = _KNOWN_TICKERS[q]
+        return (name, ticker) if ticker else (name, "")
+
+    # ── 2순위: 네이버 증권 자동완성 ──
     try:
-        # KRX KIND API — 회사명 검색
+        r = requests.get(
+            "https://ac.finance.naver.com/ac",
+            params={"q": q, "q_enc": "UTF-8", "st": "111", "frm": "nasdaq",
+                    "le": "100", "r_format": "json", "r_enc": "UTF-8"},
+            headers={"User-Agent": "Mozilla/5.0", "Referer": "https://finance.naver.com/"},
+            timeout=4
+        )
+        data = r.json()
+        items = data.get("items", [[]])[0]   # 첫 번째 그룹
+        for item in items:
+            # item: [종목코드, 종목명, 시장구분, ...]
+            if len(item) >= 2:
+                code = str(item[0]).strip().zfill(6)
+                name = str(item[1]).strip()
+                mkt  = str(item[2]).strip() if len(item) > 2 else ""
+                if q in name or name in q:
+                    suffix = ".KQ" if "KOSDAQ" in mkt.upper() or "코스닥" in mkt else ".KS"
+                    return name, code + suffix
+    except: pass
+
+    # ── 3순위: KRX KIND API ──
+    try:
         r = requests.get(
             "https://kind.krx.co.kr/common/searchcorpname.do",
-            params={"method": "searchCorpNameJson", "searchCorpName": company_name,
+            params={"method": "searchCorpNameJson", "searchCorpName": q,
                     "copyPageSize": "10", "currentPageSize": "10"},
             headers={"User-Agent": "Mozilla/5.0", "Referer": "https://kind.krx.co.kr/"},
             timeout=5
@@ -1344,17 +1432,16 @@ def lookup_krx_ticker(company_name):
         if not rows and isinstance(data, list):
             rows = data
         if rows:
-            # 정확 일치 우선, 없으면 첫 번째
-            exact = [x for x in rows if str(x.get("corpNm","")).strip() == company_name.strip()]
+            exact = [x for x in rows if str(x.get("corpNm","")).strip() == q]
             row   = exact[0] if exact else rows[0]
             code  = str(row.get("stockCode", row.get("isu_cd",""))).strip().zfill(6)
-            name  = str(row.get("corpNm", company_name)).strip()
+            name  = str(row.get("corpNm", q)).strip()
             mkt   = str(row.get("marketName", row.get("mkt",""))).strip()
             suffix = ".KQ" if "코스닥" in mkt or "KOSDAQ" in mkt.upper() else ".KS"
-            ticker = code + suffix if code else ""
-            return name, ticker
+            return name, code + suffix if code else ""
     except: pass
-    return company_name, ""
+
+    return q, ""
 
 
 @st.cache_data(ttl=3600)
