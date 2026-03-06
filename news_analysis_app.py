@@ -61,7 +61,7 @@ IRRELEVANT_PATTERNS = [
 
 MEDIA_MAP = {
     "chosun":"조선일보","joongang":"중앙일보","donga":"동아일보","hani":"한겨레","khan":"경향신문",
-    "yna":"연합뉴스","ytn":"YTN","imnews":"MBC","kbs":"KBS","sbs":"SBS","mt.co":"머니투데이",
+    "yna":"연합뉴스","ytn":"와이티엔","imnews":"MBC","kbs":"KBS","sbs":"SBS","mt.co":"머니투데이",
     "edaily":"이데일리","heraldcorp":"헤럴드경제","newsis":"뉴시스","newspim":"뉴스핌",
     "etnews":"전자신문","energy-news":"에너지신문","electimes":"일렉트릭타임스",
     "hankyung":"한국경제","mk.co":"매일경제","sedaily":"서울경제","ajunews":"아주경제",
@@ -69,7 +69,28 @@ MEDIA_MAP = {
     "dt.co":"디지털타임스","hankookilbo":"한국일보","munhwa":"문화일보","ohmynews":"오마이뉴스",
     "pressian":"프레시안","energydaily":"에너지데일리","naeil":"내일신문","seoul":"서울신문",
     "ekn":"에너지경제","kukminilbo":"국민일보","segyetimes":"세계일보","e2news":"이투뉴스",
+    "nocutnews":"노컷뉴스","hani.co":"한겨레","kmib":"국민일보","donga.com":"동아일보",
+    "joins":"중앙일보","chosun.com":"조선일보","jtbc":"JTBC","tvchosun":"TV조선",
+    "mbn":"MBN","channel.a":"채널A","yonhap":"연합뉴스","asiae":"아시아경제",
+    "koreaherald":"코리아헤럴드","koreatimes":"코리아타임스","koreajoongang":"중앙일보",
+    "dailian":"데일리안","newdaily":"뉴데일리","pennmike":"펜앤드마이크",
+    "wikileaks":"위키리크스코리아","mediatoday":"미디어오늘","pdjournal":"PD저널",
+    "journalist":"저널리스트","mindlenews":"마인들뉴스","naver":"네이버뉴스",
+    "daum":"다음뉴스","kakao":"카카오","biz.chosun":"조선비즈","news.chosun":"조선일보",
+    "news.jtbc":"JTBC","news1":"뉴스1","tf.co":"더팩트","sisajournal":"시사저널",
+    "weekly.chosun":"주간조선","monthly.chosun":"월간조선","economist":"이코노미스트",
+    "moneys":"머니S","bizwatch":"비즈워치","thebell":"더벨","hankyoreh":"한겨레",
+    "kookje":"국제신문","idomin":"경남도민일보","gnmaeil":"경남매일","busan":"부산일보",
+    "knnews":"경인일보","kyeonggi":"경기일보","joongdo":"중도일보","daejonilbo":"대전일보",
+    "jeonbuk":"전북일보","jnilbo":"전남일보","gwangnam":"광남일보","jemin":"제민일보",
+    "jejunews":"제주일보","kado":"강원도민일보","kwnews":"강원일보",
 }
+# 표시용 한글 매체명 정규화 (영문 약칭 → 한글)
+MEDIA_KR_NAME = {
+    "YTN":"와이티엔","KBS":"케이비에스","MBC":"MBC","SBS":"SBS",
+    "JTBC":"JTBC","MBN":"MBN","TV조선":"TV조선","채널A":"채널A",
+}
+
 
 TOPIC_GROUPS = {
     "전기요금":["전기요금","요금","전력요금","인상","누진제","전기세"],
@@ -393,11 +414,103 @@ CRISIS_EXECUTION_STRATEGY = [
     },
 ]
 
+def _extract_core_issue(headlines):
+    """헤드라인 목록에서 핵심 쟁점 키워드와 이슈 유형을 추출"""
+    if not headlines:
+        return "", []
+    issue_patterns = [
+        (r"(수사|조사|압수수색|기소|고발|고소|경찰|검찰)", "수사·법적 리스크"),
+        (r"(파업|쟁의|노조|단체협약|갈등|파행)", "노사 갈등"),
+        (r"(인상|요금|누진|전기세|가격|부담)", "요금 인상 부담"),
+        (r"(사망|부상|사고|재해|화재|폭발|안전)", "안전사고"),
+        (r"(적자|손실|부채|재무|적자|결손)", "재무 악화"),
+        (r"(지연|취소|중단|차질|연기|무산)", "사업 차질"),
+        (r"(비리|부패|횡령|특혜|불법|로비|뇌물)", "비위·도덕성"),
+        (r"(오염|누출|탄소|환경|폐기)", "환경 이슈"),
+        (r"(불만|민원|항의|반발|피해)", "여론 악화"),
+        (r"(낙하산|인사|임명|선임|선발)", "인사 논란"),
+    ]
+    text = " ".join(headlines)
+    found = [label for pat, label in issue_patterns if re.search(pat, text)]
+    words = re.findall(r"[가-힣]{2,5}", text)
+    freq  = Counter(words)
+    stopwords = {"관련","보도","기사","언론","뉴스","대한","위한","으로","에서","에게","부터","까지",
+                 "그리고","하지만","그러나","또한","이번","지난","올해","올","이후","이전","등록","발표",
+                 "확인","예정","진행","추진","계획","방침","검토","강조","지적","밝혀","통해","따라"}
+    keywords = [w for w, c in freq.most_common(12) if c >= 2 and w not in stopwords][:3]
+    return ", ".join(keywords) if keywords else "", found
+
+
+def _build_dynamic_insight(cat, headlines, found_issues, label):
+    """기사 내용을 바탕으로 구체적 To-Be 제안 동적 생성"""
+    db_base  = INSIGHT_DB.get(cat, DEFAULT_INSIGHT)
+    core_kw, _ = _extract_core_issue(headlines)
+    kw = f"'{core_kw}'" if core_kw else "해당 이슈"
+
+    if "수사·법적 리스크" in found_issues:
+        action = f"법무팀 공식 입장 24시간 내 발표 — {kw} 관련 사실관계 선제 공개"
+        msg    = f"{kw} 보도가 수사·법적 이슈로 확산되기 전, 먼저 입장을 내는 쪽이 여론을 선점한다."
+        steps  = ["사실관계 확인 즉시 공식 입장 발표", "법적 대응보다 '적극 협조·투명 소명' 메시지 우선", "언론사별 1:1 팩트 브리핑 실시"]
+    elif "노사 갈등" in found_issues:
+        action = f"협상 현황 정기 브리핑으로 {kw} 관련 루머 선제 차단"
+        msg    = f"파업·갈등 보도는 공공서비스 불안으로 프레임이 전환된다. {kw} 이슈는 침묵이 최악이다."
+        steps  = ["협상 진행 상황 주 1회 정기 브리핑 실시", "공공서비스 정상 유지 메시지 선점", "노사 공동 성명 또는 협의 시그널 제공"]
+    elif "요금 인상 부담" in found_issues:
+        action = f"{kw} 보도 대응 — 원가·지원 실적 팩트시트 즉시 배포"
+        msg    = f"요금 이슈는 감정이 아닌 숫자로 설득해야 한다. {kw} 관련 구체 수치가 설득의 무기다."
+        steps  = ["원가회수율·지원 가구 수 수치화 자료 즉시 배포", "취약계층 지원 성과 스토리 발굴·배포", "핵심 매체 1:1 설명회 개최"]
+    elif "안전사고" in found_issues:
+        action = f"{kw} 관련 사고 원인·재발방지책 48시간 내 공식 발표"
+        msg    = f"안전 이슈는 '얼마나 빨리, 얼마나 구체적으로' 대응하느냐가 2차 피해를 막는다."
+        steps  = ["사고 원인 및 재발방지책 48시간 내 발표", "현장 안전 투자 데이터 동시 제공", "협력업체 포함 안전망 확대 조치 공표"]
+    elif "재무 악화" in found_issues:
+        action = f"{kw} 관련 개선 지표 — 전기 대비 변화폭 중심 선제 공개"
+        msg    = f"재무 보도에는 '얼마나 줄었나'를 먼저 말해야 한다. 과거 대비 개선폭이 핵심이다."
+        steps  = ["부채 감축·효율화 실적 정량 보도자료 발표", "경영 효율화 구체 사례 스토리텔링", "경제지 전담 기자 관계 집중 강화"]
+    elif "비위·도덕성" in found_issues:
+        action = f"{kw} 의혹 관련 감사 결과 자진 공개 및 재발방지 조치 발표"
+        msg    = f"비리·특혜 의혹은 숨기면 더 크게 터진다. 먼저 공개하는 것이 신뢰 회복의 시작이다."
+        steps  = ["감사 결과 자진 공개로 선제 대응", "구체적 윤리경영 조치 언론 제공", "외부 제3자 검증 활용으로 신뢰성 확보"]
+    elif "사업 차질" in found_issues:
+        action = f"{kw} 지연 이슈 — 진행 현황 정기 업데이트로 불확실성 해소"
+        msg    = f"불확실성이 비판을 낳는다. {kw} 관련 알려줄 수 있는 정보는 먼저 알려라."
+        steps  = ["사업 진행 현황 정기 업데이트 발표", "지연 원인과 수정 일정 구체 공개", "대안·보완책 동시 발표로 신뢰 유지"]
+    elif "여론 악화" in found_issues:
+        action = f"{kw} 관련 민원·불만 처리 현황 공개 및 개선 로드맵 발표"
+        msg    = f"민원 통계보다 '실제 해결된 사람의 이야기'가 언론에 더 잘 먹힌다."
+        steps  = ["민원 처리 속도·만족도 지표 공개", "해결 사례 스토리 발굴 및 배포", "24시간 대응 체계 구축 사실 홍보"]
+    elif "인사 논란" in found_issues:
+        action = f"{kw} 관련 인사 원칙·기준 투명 공개 및 전문성 검증 자료 제공"
+        msg    = f"인사 논란은 '왜 이 사람인가'에 대한 구체 근거로만 막을 수 있다."
+        steps  = ["인사 원칙·선발 기준 투명 공개", "해당 인사의 전문성·경력 구체 자료 제공", "이사회·외부위원회 검증 절차 강조"]
+    else:
+        # 기사 키워드 기반 fallback
+        if core_kw:
+            action = f"{kw} 이슈 공식 입장 48시간 내 발표 및 담당 창구 일원화"
+            msg    = f"{kw} 관련 언론 보도에는 먼저, 빠르게, 구체적으로 대응하는 것이 원칙이다."
+            steps  = [f"{kw} 관련 공식 입장 즉시 발표", "담당 부서 창구 일원화", "미디어 대응 매뉴얼 사전 준비"]
+        else:
+            action = db_base.get("action", DEFAULT_INSIGHT["action"])
+            msg    = db_base.get("msg",    DEFAULT_INSIGHT["msg"])
+            steps  = db_base.get("steps",  DEFAULT_INSIGHT["steps"])
+
+    return {
+        "bg":     db_base.get("bg", ""),
+        "action": action,
+        "msg":    msg,
+        "steps":  steps,
+    }
+
+
 def gen_paired_insights(criticisms):
+    """기사 헤드라인 분석 기반 동적 To-Be 인사이트 생성"""
     result = []
     for c in criticisms:
-        cat = c.get("category", c["title"])
-        db = INSIGHT_DB.get(cat, DEFAULT_INSIGHT)
+        cat       = c.get("category", c["title"])
+        headlines = c.get("headlines", [])
+        label     = c.get("title", cat)
+        _, found_issues = _extract_core_issue(headlines)
+        db = _build_dynamic_insight(cat, headlines, found_issues, label)
         result.append({"criticism": c, "db": db})
     return result
 
@@ -482,8 +595,26 @@ def get_media(o,l):
     url=o if o else l
     for d,n in MEDIA_MAP.items():
         if d in url: return n
-    try: return url.split("//")[-1].split("/")[0].replace("www.","").split(".")[0]
+    # 도메인에서 추출 후 한글 불가능하면 '기타'로
+    try:
+        domain = url.split("//")[-1].split("/")[0].replace("www.","")
+        part = domain.split(".")[0]
+        # 숫자나 영문만이면 기타 처리
+        if part and not part.isascii():
+            return part
+        return "기타"
     except: return "기타"
+
+def is_major_media(media):
+    """주요매체 여부 (MEDIA_GRADE 등록 = 전국지/방송)"""
+    return media in MEDIA_GRADE
+
+def media_sort_key(media):
+    """주요매체 우선, 그 다음 rank 순"""
+    is_major = 0 if is_major_media(media) else 1
+    rank = MEDIA_GRADE.get(media,{}).get("rank", 999)
+    return (is_major, rank)
+
 def is_relevant(t): return not any(re.search(p,t) for p in IRRELEVANT_PATTERNS)
 def get_sentiment(t):
     p=sum(1 for w in POSITIVE_WORDS if w in t); n=sum(1 for w in NEGATIVE_WORDS if w in t)
@@ -680,8 +811,9 @@ def build_email_html(arts, df, label, period_str):
 
     # ── 05. 전체 기사 목록 ──
     df_sorted = df.copy()
-    df_sorted["_r"] = df_sorted["매체"].apply(get_media_rank)
-    df_sorted = df_sorted.sort_values(["일자","_r"], ascending=[False,True]).reset_index(drop=True)
+    df_sorted["_major"] = df_sorted["매체"].apply(lambda m: 0 if is_major_media(m) else 1)
+    df_sorted["_r"]     = df_sorted["매체"].apply(get_media_rank)
+    df_sorted = df_sorted.sort_values(["일자","_major","_r"], ascending=[False,True,True]).reset_index(drop=True)
 
     sent_icon = {"부정":"🔴","긍정":"🔵","중립":"🟡"}
     article_rows = ""
@@ -1551,17 +1683,41 @@ def make_full_word(cd):
         cells[2].text=db["action"]; cells[3].text=db["msg"]
     doc.add_paragraph()
 
-    hd("06. 기사 전체 목록")
-    df_s=df.copy(); df_s['_r']=df_s['매체'].apply(get_media_rank)
-    df_s=df_s.sort_values(['일자','_r'],ascending=[False,True]).reset_index(drop=True)
-    tbl5=doc.add_table(rows=1,cols=5); tbl5.style='Table Grid'
-    set_table_header(tbl5, ["No.","일자","매체","헤드라인","논조"])
-    for idx,row in enumerate(df_s.to_dict("records"),1):
-        cells=tbl5.add_row().cells
-        cells[0].text=str(idx); cells[1].text=str(row["일자"])
-        cells[2].text=str(row["매체"]); cells[3].text=str(row["헤드라인"])
-        cells[4].text=str(row["감성"])
-    buf=io.BytesIO(); doc.save(buf); buf.seek(0); return buf
+    hd("06. 기사 전체 목록 (주요매체)")
+    df_s = df.copy()
+    df_s['_major'] = df_s['매체'].apply(lambda m: 0 if is_major_media(m) else 1)
+    df_s['_r']     = df_s['매체'].apply(get_media_rank)
+    # 주요매체만 필터
+    df_s = df_s[df_s['_major'] == 0]
+    df_s = df_s.sort_values(['일자','_r'], ascending=[False, True]).reset_index(drop=True)
+
+    tbl5 = doc.add_table(rows=1, cols=5); tbl5.style='Table Grid'
+    set_table_header(tbl5, ["No.","일자","매체","헤드라인 (링크)","논조"])
+    for idx, row in enumerate(df_s.to_dict("records"), 1):
+        cells = tbl5.add_row().cells
+        cells[0].text = str(idx)
+        cells[1].text = str(row["일자"])
+        cells[2].text = str(row["매체"])
+        cells[4].text = str(row["감성"])
+        # 헤드라인 셀에 하이퍼링크 삽입
+        headline_cell = cells[3]
+        headline_cell.text = ""
+        para = headline_cell.paragraphs[0]
+        run  = para.add_run(str(row["헤드라인"]))
+        run.font.size = Pt(9)
+        run.font.color.rgb = RGBColor(0, 51, 153)
+        run.font.underline = True
+        link_url = str(row.get("링크",""))
+        if link_url:
+            # docx 하이퍼링크 XML 삽입
+            from docx.opc.constants import RELATIONSHIP_TYPE as RT
+            part = doc.part
+            r_id = part.relate_to(link_url, "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink", is_external=True)
+            hyperlink = OxmlElement("w:hyperlink")
+            hyperlink.set(qn("r:id"), r_id)
+            hyperlink.append(run._r)
+            para._p.append(hyperlink)
+    buf = io.BytesIO(); doc.save(buf); buf.seek(0); return buf
 
 # ── 섹션 헤더 ──────────────────────────────────────────
 def divider(n, count_html=""):
@@ -1911,6 +2067,7 @@ def render_report(cd):
         radar_cats = [c for c,v in cat_neg_sorted][:6]
     radar_vals = [cat_neg_counts.get(c, 0) for c in radar_cats]
     max_v = max(radar_vals) if radar_vals else 1
+    max_v = max_v if max_v > 0 else 1
     radar_norm = [round(v/max_v*5, 1) for v in radar_vals]
 
     # 레이더 Plotly
@@ -2025,8 +2182,9 @@ def render_report(cd):
     divider("08 · 기사 목록", count_html)
 
     fdf = df.copy()
-    fdf['_rank'] = fdf['매체'].apply(get_media_rank)
-    fdf = fdf.sort_values(['일자','_rank'], ascending=[False, True]).reset_index(drop=True)
+    fdf['_major'] = fdf['매체'].apply(lambda m: 0 if is_major_media(m) else 1)
+    fdf['_rank']  = fdf['매체'].apply(get_media_rank)
+    fdf = fdf.sort_values(['일자','_major','_rank'], ascending=[False, True, True]).reset_index(drop=True)
 
     # 컬럼별 필터 — 1줄 인라인
     all_dates = ["전체"]+sorted(fdf["일자"].unique().tolist(), reverse=True)
@@ -2052,12 +2210,45 @@ def render_report(cd):
     ddf = fdf.iloc[:st.session_state[sk]]
 
     rh = ""
+    prev_date   = None
+    shown_divider = False   # 날짜 그룹 내 지방/전문지 구분선 삽입 여부
     for i, row in enumerate(ddf.to_dict("records"), 1):
+        cur_date  = row["일자"]
+        is_major  = is_major_media(row["매체"])
+
+        # 날짜가 바뀌면 구분선 플래그 리셋
+        if cur_date != prev_date:
+            prev_date     = cur_date
+            shown_divider = False
+
+        # 같은 날짜 안에서 주요→기타 첫 전환 시 구분선 삽입
+        if not is_major and not shown_divider:
+            shown_divider = True
+            rh += (
+                "<tr><td colspan='7' style='padding:2px 8px;background:#f5f5f5;"
+                "font-size:9px;color:#999;font-family:" + FONT_KR + ";'>"
+                "▼ 지방지·전문지·인터넷매체</td></tr>"
+            )
+
         light = sentiment_light(row["감성"])
-        gi2 = MEDIA_GRADE.get(row["매체"],{}); grade=gi2.get("grade",""); gc_=GRADE_COLOR.get(grade,"#ccc")
-        gs = f"<span style='background:{gc_};color:white;padding:0 3px;border-radius:2px;font-size:8px;font-weight:700;'>{grade}</span>" if grade else ""
-        summ = str(row.get('요약',''))[:30]
-        rh += f"<tr><td style='text-align:center;color:#aaa;font-size:10px;padding:4px 6px;'>{i}</td><td style='font-size:10px;padding:4px 6px;'>{row['일자']}</td><td style='font-size:10px;padding:4px 6px;'>{row['매체']} {gs}</td><td style='padding:4px 6px;'><a href='{row['링크']}' target='_blank' style='color:#003366;text-decoration:none;font-size:11px;'>{row['헤드라인']}</a></td><td style='color:#666;font-size:10px;padding:4px 6px;'>{summ}</td><td style='text-align:center;font-size:16px;padding:4px 6px;'>{light}</td><td style='color:#999;font-size:9px;padding:4px 6px;'>{row.get('카테고리','—')}</td></tr>"
+        gi2   = MEDIA_GRADE.get(row["매체"],{}); grade=gi2.get("grade",""); gc_=GRADE_COLOR.get(grade,"#ccc")
+        gs    = f"<span style='background:{gc_};color:white;padding:0 3px;border-radius:2px;font-size:8px;font-weight:700;'>{grade}</span>" if grade else ""
+        # 비주요매체 행 배경 살짝 회색
+        row_bg = "background:#fafafa;" if not is_major else ""
+        summ   = str(row.get('요약',''))[:30]
+        rh += (
+            f"<tr style='{row_bg}'>"
+            f"<td style='text-align:center;color:#aaa;font-size:10px;padding:4px 6px;'>{i}</td>"
+            f"<td style='font-size:10px;padding:4px 6px;'>{row['일자']}</td>"
+            f"<td style='font-size:10px;padding:4px 6px;'>{row['매체']} {gs}</td>"
+            f"<td style='padding:4px 6px;'><a href='{row['링크']}' target='_blank' "
+            f"style='color:{'#003366' if is_major else '#555'};text-decoration:none;font-size:11px;'>"
+            f"{row['헤드라인']}</a></td>"
+            f"<td style='color:#666;font-size:10px;padding:4px 6px;'>{summ}</td>"
+            f"<td style='text-align:center;font-size:16px;padding:4px 6px;'>{light}</td>"
+            f"<td style='color:#999;font-size:9px;padding:4px 6px;'>{row.get('카테고리','—')}</td>"
+            f"</tr>"
+        )
 
     st.markdown(f"""<div style='overflow-x:auto;margin-top:6px;'><table style='width:100%;border-collapse:collapse;font-family:{FONT_KR};'>
     <thead><tr style='background:#003366;color:white;font-size:11px;'>
@@ -2114,7 +2305,7 @@ with st.sidebar:
     st.markdown(f"<h3 style='font-family:{FONT_KR};'>분석 설정</h3>", unsafe_allow_html=True)
     with st.form("mf", clear_on_submit=False):
         kc1s,kc2s = st.columns([5,1])
-        with kc1s: keywords_input = st.text_input("🔍 키워드 (Enter=분석)", "한국전력", placeholder="키워드 입력 후 Enter")
+        with kc1s: keywords_input = st.text_input("🔍 키워드 (Enter=분석)", "", placeholder="키워드 입력 후 Enter")
         with kc2s:
             st.markdown("<div style='padding-top:24px;'>", unsafe_allow_html=True)
             run = st.form_submit_button("Go", use_container_width=True)
