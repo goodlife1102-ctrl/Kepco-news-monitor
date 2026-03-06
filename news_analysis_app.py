@@ -1507,7 +1507,6 @@ def get_market_data(custom_ticker=""):
         "sp500":"—","sp500_c":"","sp500_p":"","sp500_up":True,
         "usd_krw":"—","usd_c":"","usd_up":True,
         "oil":"—","oil_c":"","oil_up":True,
-        "pres_sched":"",  # 대통령 일정 (1줄 문자열)
         "custom_name": custom_ticker,
         "custom_price":"—","custom_c":"","custom_up":True,
         "updated": (datetime.utcnow() + timedelta(hours=9)).strftime("%Y.%m.%d %H:%M"),
@@ -1548,8 +1547,6 @@ def get_market_data(custom_ticker=""):
                     d.update({"custom_price": price_str,"custom_c": chg_str,"custom_up": up})
             except: pass
 
-    # 금주 대통령 일정 (별도 캐시 함수로 처리)
-    d["pres_sched"] = get_weekly_pres_schedule()   # list of str
     return d
 
 def mhdr(d):
@@ -1593,21 +1590,6 @@ def mhdr(d):
     else:
         custom_section = ""
 
-    # 대통령 일정 (1줄 문자열, 없으면 공간 제거)
-    pres_html = ""
-    pres_str  = d.get("pres_sched", "")
-    if isinstance(pres_str, list):
-        pres_str = " / ".join(pres_str)
-    if pres_str:
-        pres_html = (
-            "<div style='border-left:1px solid #ddd;padding-left:10px;margin-right:6px;"
-            "max-width:290px;flex-shrink:1;'>"
-            "<div style='font-size:8px;color:#888;font-weight:700;margin-bottom:1px;'>🗓 대통령 일정</div>"
-            f"<div style='font-size:9px;font-weight:600;color:#4A148C;"
-            f"white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'>{pres_str}</div>"
-            "</div>"
-        )
-
     updated = f"<div style='margin-left:auto;font-size:8px;color:#aaa;white-space:nowrap;'>{d['updated']}</div>"
 
     # 레이아웃: 코스피/코스닥 | 나스닥/S&P | [회사주가(있을때)] | USD/두바이유 | [대통령일정] | 업데이트
@@ -1621,7 +1603,6 @@ def mhdr(d):
         + custom_section      # 구독자 전용: 회사 주가
         + sep2
         + usd_row + oil_row
-        + pres_html           # 대통령 일정 (있을 때만)
         + updated
         + "</div>"
     )
@@ -2796,23 +2777,68 @@ with st.sidebar:
                     f"font-family:{FONT_KR};'>구독자 목록 ({len(adm_subs)}명)</div>",
                     unsafe_allow_html=True
                 )
-                rows = "".join(
-                    f"<tr style='border-bottom:1px solid #f0f0f0;font-size:11px;'>"
-                    f"<td style='padding:4px 6px;'>{s['email']}</td>"
-                    f"<td style='padding:4px 6px;color:#003366;font-weight:700;'>{s.get('keyword','한국전력')}</td>"
-                    f"<td style='padding:4px 6px;color:#555;'>{s.get('send_hour',6):02d}:{s.get('send_minute',30):02d}</td>"
-                    f"</tr>"
-                    for s in adm_subs
-                )
-                st.markdown(
-                    f"<table style='width:100%;border-collapse:collapse;font-family:{FONT_KR};'>"
-                    f"<thead><tr style='background:#003366;color:white;font-size:10px;'>"
-                    f"<th style='padding:5px 6px;text-align:left;'>이메일</th>"
-                    f"<th style='padding:5px 6px;'>키워드</th>"
-                    f"<th style='padding:5px 6px;'>발송시각</th></tr></thead>"
-                    f"<tbody>{rows}</tbody></table>",
-                    unsafe_allow_html=True
-                )
+                # ── 체크박스 + 구독자 테이블 ──
+                if "del_checks" not in st.session_state:
+                    st.session_state.del_checks = {}
+
+                # 헤더 행
+                hd1, hd2, hd3, hd4, hd5 = st.columns([0.5, 3, 3, 1.5, 1])
+                hd1.markdown("<div style='font-size:9px;color:#888;'>선택</div>", unsafe_allow_html=True)
+                hd2.markdown("<div style='font-size:9px;color:#888;font-weight:700;'>이메일</div>", unsafe_allow_html=True)
+                hd3.markdown("<div style='font-size:9px;color:#888;font-weight:700;'>키워드</div>", unsafe_allow_html=True)
+                hd4.markdown("<div style='font-size:9px;color:#888;font-weight:700;'>발송시각</div>", unsafe_allow_html=True)
+                hd5.markdown("<div style='font-size:9px;color:#888;font-weight:700;'>가입일</div>", unsafe_allow_html=True)
+                st.markdown("<hr style='margin:2px 0 4px;border-color:#ddd;'>", unsafe_allow_html=True)
+
+                for idx_s, s in enumerate(adm_subs):
+                    email_key = s["email"].lower()
+                    c1, c2, c3, c4, c5 = st.columns([0.5, 3, 3, 1.5, 1])
+                    with c1:
+                        checked = st.checkbox("", key=f"del_chk_{idx_s}",
+                                              value=st.session_state.del_checks.get(email_key, False),
+                                              label_visibility="collapsed")
+                        st.session_state.del_checks[email_key] = checked
+                    with c2:
+                        st.markdown(f"<div style='font-size:10px;padding-top:6px;word-break:break-all;'>{s['email']}</div>", unsafe_allow_html=True)
+                    with c3:
+                        kw = s.get("keyword","—")
+                        co = s.get("company_name","")
+                        co_badge = (f" <span style='background:#E8EAF6;color:#3949AB;font-size:8px;"
+                                    f"padding:1px 4px;border-radius:3px;'>📌{co}</span>") if co else ""
+                        st.markdown(f"<div style='font-size:10px;padding-top:6px;color:#003366;font-weight:700;'>{kw}{co_badge}</div>", unsafe_allow_html=True)
+                    with c4:
+                        st.markdown(f"<div style='font-size:11px;padding-top:6px;text-align:center;'>"
+                                    f"{s.get('send_hour',6):02d}:{s.get('send_minute',30):02d}</div>", unsafe_allow_html=True)
+                    with c5:
+                        joined = s.get("joined_at","")[:10] if s.get("joined_at") else "—"
+                        st.markdown(f"<div style='font-size:9px;padding-top:6px;color:#aaa;'>{joined}</div>", unsafe_allow_html=True)
+
+                st.markdown("<hr style='margin:4px 0 6px;border-color:#eee;'>", unsafe_allow_html=True)
+
+                # ── 일괄 삭제 버튼 ──
+                selected_emails = [email for email, chk in st.session_state.del_checks.items() if chk]
+                dc1, dc2 = st.columns([3, 1])
+                with dc1:
+                    if selected_emails:
+                        st.markdown(
+                            f"<div style='font-size:10px;color:#C62828;padding-top:6px;'>"
+                            f"선택된 구독자 {len(selected_emails)}명 삭제 예정</div>",
+                            unsafe_allow_html=True
+                        )
+                with dc2:
+                    if st.button("🗑 선택 삭제", key="bulk_del_btn", use_container_width=True,
+                                 disabled=len(selected_emails)==0):
+                        fresh2     = load_sub()
+                        fresh_subs2 = fresh2.get("subscribers", [])
+                        fresh_subs2 = [s for s in fresh_subs2
+                                       if s["email"].lower() not in selected_emails]
+                        fresh2["subscribers"] = fresh_subs2
+                        save_sub(fresh2); apply_scheduler(fresh2)
+                        # 체크 상태 초기화
+                        for em in selected_emails:
+                            st.session_state.del_checks.pop(em, None)
+                        st.success(f"✅ {len(selected_emails)}명 삭제 완료")
+                        st.rerun()
             else:
                 st.caption("구독자 없음")
 
