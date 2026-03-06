@@ -2103,8 +2103,128 @@ with st.sidebar:
     status_icon = "🟢" if sub_cfg.get("enabled") else "⚫"
     last_sent   = sub_cfg.get("last_sent", "")
     last_txt    = f"마지막 발송: {last_sent}" if last_sent else "아직 발송 없음"
+    ADMIN_PW    = "kepco2025"   # ← 관리자 비밀번호 (여기서 변경)
 
-    with st.expander(f"{status_icon} 뉴스 알리미 구독 설정", expanded=False):
+    with st.expander(f"{status_icon} 뉴스 알리미 구독", expanded=False):
+        st.markdown(f"<div style='font-size:10px;color:#888;margin-bottom:10px;font-family:{FONT_KR};'>{last_txt}</div>", unsafe_allow_html=True)
+
+        # ══ [일반] 구독 신청 / 해제 ══
+        st.markdown(f"<div style='font-size:12px;font-weight:800;color:#003366;margin-bottom:6px;font-family:{FONT_KR};'>📬 구독 신청 / 해제</div>", unsafe_allow_html=True)
+
+        with st.form("user_sub_form", clear_on_submit=True):
+            user_email = st.text_input("내 이메일", placeholder="my@email.com", label_visibility="collapsed")
+            uc1, uc2 = st.columns(2)
+            with uc1: sub_btn  = st.form_submit_button("구독 신청", use_container_width=True)
+            with uc2: unsub_btn = st.form_submit_button("구독 해제", use_container_width=True)
+
+        if sub_btn or unsub_btn:
+            addr = user_email.strip().lower()
+            if not addr or "@" not in addr:
+                st.error("올바른 이메일 주소를 입력해 주세요.")
+            else:
+                cur_raw = sub_cfg.get("recipients", "")
+                cur_list = [r.strip().lower() for r in cur_raw.replace("\n",",").split(",") if r.strip()]
+                if sub_btn:
+                    if addr in cur_list:
+                        st.warning(f"{addr} 은(는) 이미 구독 중입니다.")
+                    else:
+                        cur_list.append(addr)
+                        sub_cfg["recipients"] = ", ".join(cur_list)
+                        save_sub(sub_cfg)
+                        st.success(f"✅ {addr} 구독 신청 완료!")
+                else:
+                    if addr not in cur_list:
+                        st.warning(f"{addr} 은(는) 구독 목록에 없습니다.")
+                    else:
+                        cur_list.remove(addr)
+                        sub_cfg["recipients"] = ", ".join(cur_list)
+                        save_sub(sub_cfg)
+                        st.success(f"✅ {addr} 구독 해제 완료.")
+
+        st.markdown("<div style='height:6px;'></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='font-size:10px;color:#aaa;font-family:{FONT_KR};'>구독하면 매일 아침 한국전력 뉴스 리포트가 발송됩니다.</div>", unsafe_allow_html=True)
+
+        # ══ [관리자] 발신 계정·발송 시각 설정 ══
+        st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='font-size:12px;font-weight:800;color:#555;margin-bottom:6px;font-family:{FONT_KR};'>🔒 관리자 설정</div>", unsafe_allow_html=True)
+
+        if "sub_admin_ok" not in st.session_state:
+            st.session_state.sub_admin_ok = False
+
+        if not st.session_state.sub_admin_ok:
+            with st.form("admin_gate_form", clear_on_submit=True):
+                entered_pw = st.text_input("관리자 비밀번호", type="password", placeholder="비밀번호 입력")
+                gate_btn = st.form_submit_button("잠금 해제", use_container_width=True)
+            if gate_btn:
+                if entered_pw == ADMIN_PW:
+                    st.session_state.sub_admin_ok = True
+                    st.rerun()
+                else:
+                    st.error("비밀번호가 올바르지 않습니다.")
+        else:
+            col_unlock, _ = st.columns([1,2])
+            with col_unlock:
+                if st.button("🔒 잠금", key="sub_lock_btn", use_container_width=True):
+                    st.session_state.sub_admin_ok = False
+                    st.rerun()
+
+            # 현재 구독자 수 표시
+            cur_raw2 = sub_cfg.get("recipients","")
+            cur_list2 = [r.strip() for r in cur_raw2.replace("\n",",").split(",") if r.strip()]
+            st.markdown(f"<div style='font-size:11px;color:#2E7D32;font-weight:700;margin:6px 0;font-family:{FONT_KR};'>현재 구독자 {len(cur_list2)}명</div>", unsafe_allow_html=True)
+
+            with st.form("sub_form", clear_on_submit=False):
+                sub_keyword = st.text_input("검색 키워드", value=sub_cfg.get("keyword","한국전력"))
+                sub_days = st.selectbox("수집 기간", [1,2,3,7],
+                    index=[1,2,3,7].index(sub_cfg.get("days",1)),
+                    format_func=lambda x: f"최근 {x}일")
+                st.markdown(f"<div style='font-size:11px;font-weight:700;color:#003366;margin:8px 0 4px;font-family:{FONT_KR};'>네이버 발신 계정</div>", unsafe_allow_html=True)
+                sub_sender = st.text_input("발신 이메일 (네이버)", value=sub_cfg.get("sender_email",""), placeholder="yourname@naver.com")
+                sub_pw     = st.text_input("네이버 앱 비밀번호", value=sub_cfg.get("sender_pw",""), type="password")
+                sub_recipients = st.text_area("수신 이메일 전체 목록", value=sub_cfg.get("recipients",""), height=80,
+                    help="쉼표로 구분. 구독 신청/해제로 자동 업데이트됩니다.")
+                st.markdown(f"<div style='font-size:11px;font-weight:700;color:#003366;margin:8px 0 4px;font-family:{FONT_KR};'>발송 시각 설정 (기본: 06:30)</div>", unsafe_allow_html=True)
+                tc1, tc2 = st.columns(2)
+                with tc1: sub_hour   = st.number_input("시", min_value=0, max_value=23, value=int(sub_cfg.get("send_hour",6)),   step=1)
+                with tc2: sub_minute = st.number_input("분", min_value=0, max_value=59, value=int(sub_cfg.get("send_minute",30)), step=5)
+                sub_enabled = st.checkbox("구독 활성화", value=bool(sub_cfg.get("enabled",False)))
+                sc1, sc2 = st.columns(2)
+                with sc1: save_btn = st.form_submit_button("저장", use_container_width=True)
+                with sc2: test_btn = st.form_submit_button("테스트 발송", use_container_width=True)
+
+            if save_btn or test_btn:
+                new_cfg = {
+                    "enabled":      sub_enabled,
+                    "sender_email": sub_sender.strip(),
+                    "sender_pw":    sub_pw,
+                    "recipients":   sub_recipients.strip(),
+                    "send_hour":    int(sub_hour),
+                    "send_minute":  int(sub_minute),
+                    "keyword":      sub_keyword.strip() or "한국전력",
+                    "days":         int(sub_days),
+                    "last_sent":    sub_cfg.get("last_sent",""),
+                }
+                if save_sub(new_cfg):
+                    apply_scheduler(new_cfg)
+                    if test_btn:
+                        with st.spinner("테스트 이메일 발송 중..."):
+                            ok, msg2 = send_email_report(new_cfg)
+                        if ok: st.success(f"✅ {msg2}")
+                        else:  st.error(f"❌ 발송 실패: {msg2}")
+                    else:
+                        next_time = f"{int(sub_hour):02d}:{int(sub_minute):02d}"
+                        st.success(f"✅ 저장 완료 — 매일 {next_time} 자동 발송{'됩니다' if sub_enabled else ' (비활성화)'}")
+                else:
+                    st.error("설정 저장 실패")
+
+            st.markdown(f"""<div style='background:#FFF8E1;border-left:3px solid #F9A825;padding:8px 10px;border-radius:0 4px 4px 0;font-size:10px;color:#555;line-height:1.6;font-family:{FONT_KR};margin-top:8px;'>
+<b>네이버 SMTP 설정 방법</b><br>
+네이버 메일 → 환경설정 → POP3/SMTP → SMTP 사용 선택<br>
+내 정보 → 보안설정 → 앱 비밀번호 발급
+</div>""", unsafe_allow_html=True)
+
+
+
         st.markdown(f"<div style='font-size:10px;color:#888;margin-bottom:8px;font-family:{FONT_KR};'>{last_txt}</div>", unsafe_allow_html=True)
 
         # ── 관리자 인증 게이트 ──
