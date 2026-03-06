@@ -2198,7 +2198,7 @@ with st.sidebar:
                         fresh["subscribers"] = fresh_subs
                         save_sub(fresh); apply_scheduler(fresh)
                         st.success(
-                            f"✅ 구독 완료! 매일 {int(user_hour):02d}:{int(user_minute):02d}에 "
+                            f"매일 {int(user_hour):02d}:{int(user_minute):02d}에 "
                             f"[{user_kw}] 뉴스 리포트를 보내드립니다."
                         )
                 else:
