@@ -1216,8 +1216,9 @@ def _collect_news_for(label, days):
     return arts, df, period_str
 
 
-def send_email_report(cfg, test_addr=None):
-    """구독자별 개인 키워드로 리포트 발송. test_addr 지정 시 단일 테스트 발송."""
+def send_email_report(cfg, test_addr=None, is_broadcast_test=False):
+    """구독자별 개인 키워드로 리포트 발송. test_addr 지정 시 단일 테스트 발송.
+    is_broadcast_test=True 이면 제목 앞에 (테스트) 말머리 추가."""
     try:
         subs = cfg.get("subscribers", [])
         if not subs and not test_addr:
@@ -1242,8 +1243,9 @@ def send_email_report(cfg, test_addr=None):
                 try:
                     html_body = build_email_html(arts, df, label, period_str)
                     addr      = sub["email"]
-                    subject   = (f"[KEPCO 뉴스] {label} 모니터링 리포트 — "
-                                 f"{(datetime.utcnow()+timedelta(hours=9)).strftime('%Y.%m.%d')}")
+                    prefix    = "(테스트) " if is_broadcast_test else ""
+                    today_str = (datetime.utcnow()+timedelta(hours=9)).strftime('%Y.%m.%d')
+                    subject   = (f"{prefix}[({today_str}) 글쓰는 여행자의 뉴스 모니터링 레포트] - {label}")
                     msg = MIMEMultipart("alternative")
                     msg["Subject"] = subject
                     msg["From"]    = cfg["sender_email"]
@@ -2973,6 +2975,21 @@ with st.sidebar:
                         st.success(f"✅ 저장 완료 — {'구독 활성화' if sub_enabled else '비활성화 상태'}")
                 else:
                     st.error("저장 실패")
+
+            # ── 전체 즉시 발송 버튼 (폼 밖) ──
+            st.markdown("<div style='margin-top:8px;'>", unsafe_allow_html=True)
+            if st.button("📨 전체 즉시 발송 (5명 모두 지금 발송)", use_container_width=True, key="broadcast_now"):
+                adm2 = load_sub()
+                if not adm2.get("sender_email") or not adm2.get("sender_pw"):
+                    st.error("발신 계정을 먼저 저장하세요.")
+                elif not adm2.get("subscribers"):
+                    st.warning("구독자가 없습니다.")
+                else:
+                    with st.spinner(f"전체 {len(adm2['subscribers'])}명에게 발송 중..."):
+                        ok, msg3 = send_email_report(adm2, is_broadcast_test=True)
+                    if ok: st.success(f"✅ {msg3}  |  제목 말머리: (테스트)")
+                    else:  st.error(f"❌ {msg3}")
+            st.markdown("</div>", unsafe_allow_html=True)
 
             st.markdown(
                 f"<div style='background:#FFF8E1;border-left:3px solid #F9A825;padding:8px 10px;"
