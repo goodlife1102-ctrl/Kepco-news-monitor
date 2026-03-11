@@ -1216,9 +1216,10 @@ def _collect_news_for(label, days):
     return arts, df, period_str
 
 
-def send_email_report(cfg, test_addr=None, is_broadcast_test=False):
+def send_email_report(cfg, test_addr=None, is_broadcast_test=False, custom_message=None):
     """구독자별 개인 키워드로 리포트 발송. test_addr 지정 시 단일 테스트 발송.
-    is_broadcast_test=True 이면 제목 앞에 (테스트) 말머리 추가."""
+    is_broadcast_test=True 이면 제목 앞에 (테스트) 말머리 추가.
+    custom_message 있으면 이메일 HTML 상단에 삽입."""
     try:
         subs = cfg.get("subscribers", [])
         if not subs and not test_addr:
@@ -1242,6 +1243,15 @@ def send_email_report(cfg, test_addr=None, is_broadcast_test=False):
                     continue
                 try:
                     html_body = build_email_html(arts, df, label, period_str)
+                    if custom_message and custom_message.strip():
+                        msg_banner = (
+                            f"<div style='background:#FFF8E1;border-left:4px solid #F9A825;"
+                            f"padding:12px 16px;margin-bottom:16px;font-family:\"Noto Sans KR\",sans-serif;"
+                            f"font-size:13px;color:#333;border-radius:0 6px 6px 0;'>"
+                            f"📝 <b>발신자 메시지:</b><br>{custom_message.strip().replace(chr(10), '<br>')}"
+                            f"</div>"
+                        )
+                        html_body = msg_banner + html_body
                     addr      = sub["email"]
                     prefix    = "(테스트) " if is_broadcast_test else ""
                     today_str = (datetime.utcnow()+timedelta(hours=9)).strftime('%Y.%m.%d')
@@ -2814,6 +2824,7 @@ with st.sidebar:
                             "company_name":   resolved_name,
                             "company_ticker": resolved_ticker,
                             "joined_at":      (datetime.utcnow()+timedelta(hours=9)).strftime("%Y-%m-%d %H:%M"),
+                            "start_date":     (datetime.utcnow()+timedelta(hours=9)).strftime("%Y-%m-%d"),
                         })
                         fresh["subscribers"] = fresh_subs
                         save_sub(fresh); apply_scheduler(fresh)
@@ -2880,18 +2891,18 @@ with st.sidebar:
                     st.session_state.del_checks = {}
 
                 # 헤더 행
-                hd1, hd2, hd3, hd4, hd5, hd6 = st.columns([0.5, 3, 3, 1.2, 1, 1])
+                hd1, hd2, hd3, hd4, hd5, hd6 = st.columns([0.5, 3, 3, 1.2, 2, 0.5])
                 hd1.markdown("<div style='font-size:9px;color:#888;'>선택</div>", unsafe_allow_html=True)
                 hd2.markdown("<div style='font-size:9px;color:#888;font-weight:700;'>이메일</div>", unsafe_allow_html=True)
                 hd3.markdown("<div style='font-size:9px;color:#888;font-weight:700;'>키워드</div>", unsafe_allow_html=True)
                 hd4.markdown("<div style='font-size:9px;color:#888;font-weight:700;'>발송시각</div>", unsafe_allow_html=True)
-                hd5.markdown("<div style='font-size:9px;color:#888;font-weight:700;'>수집기간</div>", unsafe_allow_html=True)
-                hd6.markdown("<div style='font-size:9px;color:#888;font-weight:700;'>가입일</div>", unsafe_allow_html=True)
+                hd5.markdown("<div style='font-size:9px;color:#888;font-weight:700;'>기준일 / 주기</div>", unsafe_allow_html=True)
+                hd6.markdown("<div style='font-size:9px;color:#888;font-weight:700;'>발송</div>", unsafe_allow_html=True)
                 st.markdown("<hr style='margin:2px 0 4px;border-color:#ddd;'>", unsafe_allow_html=True)
 
                 for idx_s, s in enumerate(adm_subs):
                     email_key = s["email"].lower()
-                    c1, c2, c3, c4, c5, c6 = st.columns([0.5, 3, 3, 1.2, 1, 1])
+                    c1, c2, c3, c4, c5, c6 = st.columns([0.5, 3, 3, 1.2, 2, 0.5])
                     with c1:
                         checked = st.checkbox("", key=f"del_chk_{idx_s}",
                                               value=st.session_state.del_checks.get(email_key, False),
@@ -2910,11 +2921,21 @@ with st.sidebar:
                                     f"{s.get('send_hour',6):02d}:{s.get('send_minute',30):02d}</div>", unsafe_allow_html=True)
                     with c5:
                         d_val = s.get("days", 1)
-                        d_lbl = f"{d_val}일" if d_val < 7 else "1주"
-                        st.markdown(f"<div style='font-size:11px;padding-top:6px;text-align:center;color:#555;'>{d_lbl}</div>", unsafe_allow_html=True)
+                        freq_lbl = {1:"매일", 2:"2일마다", 3:"3일마다", 7:"1주일마다", 30:"1개월마다"}.get(d_val, f"{d_val}일마다")
+                        sdate = s.get("start_date") or (s.get("joined_at","")[:10] if s.get("joined_at") else "—")
+                        sdate_fmt = sdate.replace("-",".") if sdate != "—" else "—"
+                        st.markdown(f"<div style='font-size:10px;padding-top:4px;color:#333;'>"
+                                    f"<span style='color:#1565C0;font-weight:700;'>{sdate_fmt}부터</span><br>"
+                                    f"<span style='color:#555;'>{freq_lbl}</span></div>", unsafe_allow_html=True)
                     with c6:
-                        joined = s.get("joined_at","")[:10] if s.get("joined_at") else "—"
-                        st.markdown(f"<div style='font-size:9px;padding-top:6px;color:#aaa;'>{joined}</div>", unsafe_allow_html=True)
+                        if st.button("📤", key=f"ind_send_{idx_s}", help=f"{s['email']}에게 즉시 발송"):
+                            adm_now = load_sub()
+                            test_msg = st.session_state.get("admin_test_msg", "")
+                            with st.spinner(f"{s['email']} 발송 중..."):
+                                ok_i, msg_i = send_email_report(adm_now, test_addr=s["email"],
+                                                                custom_message=test_msg, is_broadcast_test=True)
+                            if ok_i: st.success(f"✅ {s['email']} 발송 완료")
+                            else:    st.error(f"❌ {msg_i}")
 
                 st.markdown("<hr style='margin:4px 0 6px;border-color:#eee;'>", unsafe_allow_html=True)
 
@@ -2978,7 +2999,17 @@ with st.sidebar:
 
             # ── 전체 즉시 발송 버튼 (폼 밖) ──
             st.markdown("<div style='margin-top:8px;'>", unsafe_allow_html=True)
-            if st.button("📨 전체 즉시 발송 (5명 모두 지금 발송)", use_container_width=True, key="broadcast_now"):
+            st.markdown(
+                f"<div style='font-size:11px;font-weight:700;color:#003366;margin-bottom:4px;font-family:{FONT_KR};'>"
+                f"📝 테스트 메시지 (선택 — 이메일 상단에 삽입됩니다)</div>",
+                unsafe_allow_html=True
+            )
+            test_msg_input = st.text_area(
+                "테스트 메시지", height=68,
+                placeholder="예) 안녕하세요! 뉴스 모니터링 서비스 테스트 발송입니다. 잘 도착하는지 확인 부탁드립니다.",
+                key="admin_test_msg", label_visibility="collapsed"
+            )
+            if st.button("📨 전체 즉시 발송 (모든 구독자에게 지금 발송)", use_container_width=True, key="broadcast_now"):
                 adm2 = load_sub()
                 if not adm2.get("sender_email") or not adm2.get("sender_pw"):
                     st.error("발신 계정을 먼저 저장하세요.")
@@ -2986,7 +3017,8 @@ with st.sidebar:
                     st.warning("구독자가 없습니다.")
                 else:
                     with st.spinner(f"전체 {len(adm2['subscribers'])}명에게 발송 중..."):
-                        ok, msg3 = send_email_report(adm2, is_broadcast_test=True)
+                        ok, msg3 = send_email_report(adm2, is_broadcast_test=True,
+                                                     custom_message=test_msg_input)
                     if ok: st.success(f"✅ {msg3}  |  제목 말머리: (테스트)")
                     else:  st.error(f"❌ {msg3}")
             st.markdown("</div>", unsafe_allow_html=True)
