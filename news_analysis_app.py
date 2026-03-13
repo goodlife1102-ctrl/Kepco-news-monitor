@@ -2463,13 +2463,23 @@ def render_report(cd):
   </table>
 </div>""", unsafe_allow_html=True)
 
+    # ═══ 05. 매체×이슈 부정 보도 매트릭스 ═══
+    st.markdown("<div style='margin-top:24px;'></div>", unsafe_allow_html=True)
+    divider("05 · 매체×이슈 부정 보도 매트릭스 — 커서를 셀에 올리면 기사 확인")
+    fig_hm = plot_heatmap_with_hover(df)
+    if fig_hm:
+        st.plotly_chart(fig_hm, use_container_width=True, config=cfg())
+    else:
+        st.caption("데이터 부족으로 히트맵 생성 불가")
+
+    # ═══ 06. 위기관리 키워드 추세 (부정 Top1, 최근 3개월 일자별) ═══
     # ═══ 05-B. 블랙리스트 기자 ═══
     st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
-    divider("05-B · 부정 보도 집중 기자 — 블랙리스트")
+    divider("06 · 부정 보도 집중 기자 — 블랙리스트")
 
     df_rep = df[df["기자"] != "—"].copy()
     if df_rep.empty:
-        st.caption("기자명 추출 데이터 없음 (네이버 뉴스 description에 '기자' 표기가 없는 경우)")
+        st.caption("기간 내 3건 이상의 부정 보도를 작성한 기자가 없습니다")
     else:
         rep_stats = []
         for rep_name, grp in df_rep.groupby("기자"):
@@ -2485,7 +2495,7 @@ def render_report(cd):
         black_list = rep_stats[:8]   # 블랙리스트 상위 8명
 
         if not black_list:
-            st.caption("부정 기사 3건 이상인 기자 없음")
+            st.caption("기간 내 3건 이상의 부정 보도를 작성한 기자가 없습니다")
         else:
             bl1, bl2 = st.columns(2)
             with bl1:
@@ -2584,16 +2594,9 @@ padding:7px 10px;border-radius:0 4px 4px 0;font-size:10px;color:#777;'>
 </div>""",
                     unsafe_allow_html=True
                 )
-    fig_hm = plot_heatmap_with_hover(df)
-    if fig_hm:
-        st.plotly_chart(fig_hm, use_container_width=True, config=cfg())
-    else:
-        st.caption("데이터 부족으로 히트맵 생성 불가")
-
-    # ═══ 06. 위기관리 키워드 추세 (부정 Top1, 최근 3개월 일자별) ═══
     top_crisis_kw = neg_kws[0][0] if neg_kws else None
     if top_crisis_kw:
-        divider(f"06 · 위기관리 키워드 추세 — 「{top_crisis_kw}」 최근 3개월 일별 노출")
+        divider(f"07 · 위기관리 키워드 추세 — 「{top_crisis_kw}」 최근 3개월 일별 노출")
         crisis_end = datetime.now()
         crisis_start = crisis_end - timedelta(days=90)
         with st.spinner(f"'{top_crisis_kw}' 최근 3개월 데이터 수집 중..."):
@@ -2645,7 +2648,7 @@ padding:7px 10px;border-radius:0 4px 4px 0;font-size:10px;color:#777;'>
             st.caption("최근 3개월 해당 키워드 데이터 없음")
 
     # ═══ 07. 비판 포인트 레이더 + As-Is/To-Be ═══
-    divider("07 · 비판 포인트 & 대응 전략")
+    divider("08 · 비판 포인트 & 대응 전략")
     paired = gen_paired_insights(criticisms)
 
     # 레이더차트: 카테고리별 부정 건수 기반 6각형
@@ -2769,7 +2772,7 @@ padding:7px 10px;border-radius:0 4px 4px 0;font-size:10px;color:#777;'>
     neu_cnt = int(df['감성'].value_counts().get('중립',0))
     pos_cnt = int(df['감성'].value_counts().get('긍정',0))
     count_html = f" <span style='font-size:12px;font-weight:400;color:#888;'>🔴 부정 {neg_cnt} · 🟡 중립 {neu_cnt} · 🟢 긍정 {pos_cnt} · 총 {total}건</span>"
-    divider("08 · 기사 목록", count_html)
+    divider("09 · 기사 목록", count_html)
 
     fdf = df.copy()
     fdf['_major'] = fdf['매체'].apply(lambda m: 0 if is_major_media(m) else 1)
