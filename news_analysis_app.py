@@ -2394,7 +2394,7 @@ def render_report(cd):
 
     def make_tip(arts_tip, color):
         """기사 목록을 툴팁 HTML로 변환"""
-        if not arts_tip:
+        if arts_tip is None or len(arts_tip) == 0:
             return "<span style='color:{};font-size:11px;'>0</span>".format(color)
         lines = "\n".join([f"· {r['일자']}  {r['헤드라인'][:22]}" for _, r in arts_tip.head(5).iterrows()])
         cnt = len(arts_tip)
