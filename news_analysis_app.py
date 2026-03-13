@@ -94,17 +94,22 @@ MEDIA_KR_NAME = {
 
 
 TOPIC_GROUPS = {
-    "전기요금":["전기요금","요금","전력요금","인상","누진제","전기세"],
-    "원전·수출":["원전","수출","원자력","UAE","체코","APR","해외수주"],
-    "재무·경영":["흑자","적자","부채","재무","비상경영","원가","실적","손실"],
-    "전력망·설비":["송전","배전","전력망","변전","선로","전력설비","정전","계통"],
-    "탄소중립·에너지전환":["탄소중립","RE100","온실가스","수소","재생에너지","넷제로","태양광","풍력"],
-    "노사관계":["노사","노조","파업","임금","단체협약","쟁의"],
-    "안전·사고":["안전","사고","재해","산재","폭발","화재","부상","사망"],
-    "AI·디지털혁신":["AI","인공지능","디지털","스마트","자동화","AX","빅데이터"],
-    "공기업·거버넌스":["공기업","감사","이사회","투명","거버넌스","윤리","비리"],
-    "고객·서비스":["서비스","고객","민원","복지","국민","전기복지"],
-    "정책·규제":["정책","규제","법안","제도","정부","국회","의원","경찰","조사","소송"],
+    # ── 범용 이슈 카테고리 ──────────────────────────
+    "재무·경영":        ["흑자","적자","부채","재무","비상경영","원가","실적","손실","매출","영업이익","적자전환","수익"],
+    "노사관계":         ["노사","노조","파업","임금","단체협약","쟁의","직원","근로자","임직원","해고","고용"],
+    "안전·사고":        ["안전","사고","재해","산재","폭발","화재","부상","사망","위험","인명","재난"],
+    "정책·규제":        ["정책","규제","법안","제도","정부","국회","의원","경찰","조사","소송","처벌","수사","압수","기소"],
+    "공기업·거버넌스":  ["공기업","감사","이사회","투명","거버넌스","윤리","비리","횡령","비위","낙하산"],
+    "AI·디지털혁신":    ["AI","인공지능","디지털","스마트","자동화","AX","빅데이터","플랫폼","데이터","IT","소프트웨어","보안"],
+    "고객·서비스":      ["서비스","고객","민원","복지","소비자","고객센터","품질","만족","불만","피해"],
+    "수출·글로벌":      ["수출","해외","글로벌","수주","계약","협약","국제","해외사업","수출입","MOU"],
+    "기술·R&D":         ["기술","연구","개발","특허","혁신","솔루션","신기술","신제품","R&D","연구개발"],
+    "환경·ESG":         ["환경","탄소","ESG","온실가스","친환경","지속가능","재생","녹색","에코"],
+    # ── 에너지·인프라 특화 ─────────────────────────
+    "전기요금":         ["전기요금","요금","전력요금","인상","누진제","전기세","에너지요금"],
+    "원전·수출":        ["원전","원자력","UAE","체코","APR","해외수주","핵발전"],
+    "전력망·설비":      ["송전","배전","전력망","변전","선로","전력설비","정전","계통","그리드"],
+    "탄소중립·에너지전환":["탄소중립","RE100","수소","재생에너지","넷제로","태양광","풍력","에너지전환"],
 }
 DISAMBIG_MAP = {"김동철":["한전","사장","한국전력","KEPCO"],"김성환":["장관","산업부"]}
 
@@ -446,8 +451,8 @@ def _extract_core_issue(headlines):
 _CAT_STRATEGY = {
     "전기요금": {
         "action_tpl": "{kw} 관련 원가·지원 실적 팩트시트 즉시 배포",
-        "msg":    "요금 이슈는 감정이 아닌 숫자로 설득해야 한다. 원가회수율·지원 가구 수 구체 수치가 설득의 무기다.",
-        "steps":  ["원가회수율·지원 가구 수 수치화 자료 즉시 배포", "취약계층 지원 성과 스토리 발굴·배포", "핵심 매체 1:1 설명회 개최"],
+        "msg":    "요금·가격 이슈는 감정이 아닌 숫자로 설득해야 한다. 원가 대비 현실화 수치와 지원 실적이 설득의 무기다.",
+        "steps":  ["원가·지원 실적 수치화 자료 즉시 배포", "취약 계층 지원 성과 스토리 발굴·배포", "핵심 매체 1:1 설명회 개최"],
     },
     "재무·경영": {
         "action_tpl": "{kw} 개선 지표 — 전기 대비 변화폭 중심 선제 공개",
@@ -486,18 +491,28 @@ _CAT_STRATEGY = {
     },
     "원전·수출": {
         "action_tpl": "{kw} 관련 계약·협상 진행 상황 정기 업데이트 공개",
-        "msg":    "불확실성이 비판을 낳는다. 원전 수출 관련 알려줄 수 있는 정보는 먼저 알려라.",
-        "steps":  ["계약·협상 진행 상황 정기 업데이트", "안전 기준·국제 인증 현황 구체 자료 제공", "기존 수출 성공 사례 집중 레퍼런스화"],
+        "msg":    "불확실성이 비판을 낳는다. 알려줄 수 있는 정보는 먼저 알려라. 협상 진행 상황 정기 업데이트가 신뢰의 핵심이다.",
+        "steps":  ["계약·협상 진행 상황 정기 업데이트 공개", "안전 기준·국제 인증 현황 구체 자료 제공", "기존 성공 사례 집중 레퍼런스화"],
     },
     "AI·디지털혁신": {
         "action_tpl": "{kw} 도입 전후 효율 지표 수치 비교 보도자료 배포",
         "msg":    "'AI 도입'이 아니라 '덕분에 이렇게 달라졌다'는 Before-After 스토리가 효과적이다.",
         "steps":  ["AI 도입 전후 효율 지표 수치 비교 자료", "구체적 서비스 개선 사례(응답시간·오류율) 제시", "보안·개인정보 보호 조치 별도 홍보"],
     },
-    "고객·서비스": {
-        "action_tpl": "{kw} 관련 민원 처리 현황 공개 및 개선 로드맵 발표",
-        "msg":    "민원 통계보다 '실제 해결된 사람의 이야기'가 언론에 더 잘 먹힌다.",
-        "steps":  ["민원 처리 속도·만족도 지표 공개", "해결 사례 스토리 발굴 및 배포", "24시간 대응 체계 구축 사실 홍보"],
+    "수출·글로벌": {
+        "action_tpl": "{kw} 관련 계약·협상 진행 상황 정기 업데이트 공개",
+        "msg":    "불확실성이 비판을 낳는다. 알려줄 수 있는 정보는 먼저 알려라. 진행 현황 업데이트가 신뢰의 핵심이다.",
+        "steps":  ["계약·협상 진행 상황 정기 업데이트 공개", "실적·성과 데이터 구체 수치로 제시", "기존 성공 사례 집중 레퍼런스화"],
+    },
+    "기술·R&D": {
+        "action_tpl": "{kw} 관련 기술 성과·투자 실적 정량 데이터 공개",
+        "msg":    "기술 이슈는 추상적 설명보다 '전후 비교 수치'가 신뢰를 만든다.",
+        "steps":  ["기술 성과 전후 비교 데이터 보도자료 배포", "핵심 연구 사례 스토리화", "전문 매체 특별 브리핑 개최"],
+    },
+    "환경·ESG": {
+        "action_tpl": "{kw} 관련 환경·ESG 이행 실적 정량 공개",
+        "msg":    "추상적 목표보다 '실제 측정 수치'가 신뢰를 만든다.",
+        "steps":  ["이행 실적 정량 공개", "국제 기준 대비 성과 비교 자료 제공", "ESG 로드맵 업데이트 공개"],
     },
 }
 
@@ -575,73 +590,69 @@ def gen_paired_insights(criticisms):
     return result
 
 def gen_criticisms(arts, kw):
-    """실제 부정 기사 헤드라인을 기반으로 이슈 제목·요점을 동적 생성"""
+    """실제 부정 기사 헤드라인·키워드 기반 동적 이슈 제목 생성 (범용)"""
     neg = [a for a in arts if a["감성"] == "부정"]
     cat_c = Counter([a["카테고리"] for a in neg])
 
-    # 카테고리별 고정 제목 (카테고리 분류명만 참조용)
-    TITLE_DB = {
-        "전기요금": "전기요금 관련 부정 보도",
-        "재무·경영": "재무·경영 위기 보도",
-        "노사관계": "노사갈등 관련 보도",
-        "공기업·거버넌스": "공기업 투명성 논란",
-        "안전·사고": "안전사고 관련 보도",
-        "전력망·설비": "전력망·설비 문제 보도",
-        "탄소중립·에너지전환": "탄소중립 이행 논란",
-        "정책·규제": "정책·규제 관련 부정 보도",
-        "원전·수출": "원전·수출 신뢰성 논란",
-        "AI·디지털혁신": "디지털 혁신 실효성 논란",
-        "고객·서비스": "고객서비스 불만 보도",
-    }
+    def _dynamic_title(cat, cat_arts, kw_label):
+        """해당 카테고리 기사의 실제 상위 부정키워드로 이슈 제목 생성"""
+        cat_text = " ".join([a.get("헤드라인","") + " " + a.get("요약","") for a in cat_arts])
+        neg_kw_cnt = {w: cat_text.count(w) for w in NEGATIVE_WORDS if cat_text.count(w) > 0}
+        top_neg = sorted(neg_kw_cnt.items(), key=lambda x: -x[1])
+        # 상위 부정 키워드가 있으면 「키워드」 논란/비판 형태로 제목 구성
+        if top_neg:
+            core = top_neg[0][0]
+            return f"「{kw_label}」 {core} 관련 {cat} 비판"
+        # 없으면 카테고리명만으로 구성
+        return f"「{kw_label}」 {cat} 관련 부정 보도"
 
     result = []
     for cat, cnt2 in cat_c.most_common(8):
         if cat == "기타":
             continue
-        # 해당 카테고리 부정 기사 중 최신순 헤드라인 최대 3건 추출
         cat_arts = [a for a in neg if a["카테고리"] == cat]
-        cat_arts_sorted = sorted(cat_arts, key=lambda x: x.get("일자", ""), reverse=True)
+        cat_arts_sorted = sorted(cat_arts, key=lambda x: x.get("일자",""), reverse=True)
 
-        # 헤드라인에서 핵심 부정 키워드 등장 문장 우선 선별
         headlines = []
         for a in cat_arts_sorted:
-            h = str(a.get("헤드라인", "")).strip()
+            h = str(a.get("헤드라인","")).strip()
             if h and h not in headlines:
                 headlines.append(h)
             if len(headlines) >= 3:
                 break
 
-        # points = 실제 헤드라인 요약 (30자 이내 truncate)
         points = [h[:32] + ("..." if len(h) > 32 else "") for h in headlines[:2]]
         if not points:
-            points = ["관련 부정 보도 집중 모니터링 필요"]
+            points = [f"{cat} 관련 부정 보도 모니터링 필요"]
 
-        # 이슈 제목: 카테고리 기본 제목 사용 (헤드라인 기반이므로 동일 카테고리라도 매번 다른 기사 반영)
-        title = TITLE_DB.get(cat, f"{cat} 비판 보도")
-
-        dots = min(5, max(2, cnt2 // max(1, len(neg) // 10) + 2))
+        title = _dynamic_title(cat, cat_arts, kw)
+        dots  = min(5, max(2, cnt2 // max(1, len(neg) // 10) + 2))
         result.append({"title": title, "points": points, "dots": dots, "category": cat, "headlines": headlines})
         if len(result) == 3:
             break
 
-    # 3개 미만이면 부족분 보충 (실제 기사 기반 기타 이슈)
+    # 기타 카테고리 기사로 보충
     if len(result) < 3:
-        other_neg = [a for a in neg if a["카테고리"] == "기타"]
-        other_sorted = sorted(other_neg, key=lambda x: x.get("일자", ""), reverse=True)
-        other_headlines = list({a.get("헤드라인", "") for a in other_sorted if a.get("헤드라인")})[:3]
-        while len(result) < 3:
-            h_list = other_headlines[:2] if other_headlines else []
-            pts = [h[:32] + ("..." if len(h) > 32 else "") for h in h_list] or ["커뮤니케이션 강화 필요"]
-            result.append({"title": "기타 부정 보도 동향", "points": pts, "dots": 2, "category": "기타", "headlines": h_list})
-            other_headlines = other_headlines[2:]
-            if not other_headlines:
+        other_neg    = [a for a in neg if a["카테고리"] == "기타"]
+        other_sorted = sorted(other_neg, key=lambda x: x.get("일자",""), reverse=True)
+        other_hs     = []
+        for a in other_sorted:
+            h = str(a.get("헤드라인","")).strip()
+            if h and h not in other_hs:
+                other_hs.append(h)
+            if len(other_hs) >= 6:
                 break
+        while len(result) < 3 and other_hs:
+            pts = [h[:32] + ("..." if len(h) > 32 else "") for h in other_hs[:2]]
+            result.append({"title": f"「{kw}」 기타 부정 보도 동향", "points": pts,
+                           "dots": 2, "category": "기타", "headlines": other_hs[:3]})
+            other_hs = other_hs[2:]
 
-    # 그래도 3개 미만이면 placeholder
+    # placeholder 보충
     fallbacks = [
-        {"title": "커뮤니케이션 체계 미흡", "points": ["위기 시 신속 대응 부족", "공식 채널 속도 개선 필요"], "dots": 3, "category": "기타", "headlines": []},
-        {"title": "사회적 책임 이행 부족",  "points": ["CSR 기대치 미충족", "이해관계자 소통 강화"], "dots": 2, "category": "기타", "headlines": []},
-        {"title": "미디어 관계 강화 필요",  "points": ["전담 기자 관계 구축", "정기 브리핑 채널 부재"], "dots": 2, "category": "기타", "headlines": []},
+        {"title": f"「{kw}」 커뮤니케이션 대응 필요",  "points": ["신속 대응 체계 점검 필요", "공식 채널 속도 개선 필요"], "dots": 2, "category": "기타", "headlines": []},
+        {"title": f"「{kw}」 미디어 관계 강화 필요",   "points": ["전담 기자 관계 구축", "정기 브리핑 채널 점검"],      "dots": 2, "category": "기타", "headlines": []},
+        {"title": f"「{kw}」 이해관계자 소통 강화 필요","points": ["이슈별 공식 대응 창구 일원화 필요"],               "dots": 2, "category": "기타", "headlines": []},
     ]
     i = 0
     while len(result) < 3 and i < len(fallbacks):
@@ -722,12 +733,21 @@ def get_news(q,mx=1000):
             s+=100
         except: break
     return items
-def auto_cat(arts):
+KEPCO_KEYWORDS = {"한국전력", "한전", "KEPCO", "kepco"}
+KEPCO_ONLY_CATS = {"전기요금", "원전·수출", "전력망·설비", "탄소중립·에너지전환"}
+
+def auto_cat(arts, label=""):
+    """label에 한국전력/한전이 포함된 경우에만 KEPCO 특화 카테고리 적용"""
+    is_kepco = any(kw in label for kw in KEPCO_KEYWORDS)
+    topic_groups = {
+        k: v for k, v in TOPIC_GROUPS.items()
+        if is_kepco or k not in KEPCO_ONLY_CATS
+    }
     for a in arts:
-        t=a["헤드라인"]+" "+a.get("요약","")
-        sc={c:sum(1 for w in ws if w in t) for c,ws in TOPIC_GROUPS.items()}
-        sc={k:v for k,v in sc.items() if v>0}
-        a["카테고리"]=max(sc,key=sc.get) if sc else "기타"
+        t = a["헤드라인"] + " " + a.get("요약","")
+        sc = {c: sum(1 for w in ws if w in t) for c, ws in topic_groups.items()}
+        sc = {k: v for k, v in sc.items() if v > 0}
+        a["카테고리"] = max(sc, key=sc.get) if sc else "기타"
     return arts
 def extract_kws(arts,sent,n=3):
     ft=[a for a in arts if a["감성"]==sent]
@@ -1225,9 +1245,7 @@ def _collect_news_for(label, days):
                      "기자": reporter, "링크": orig if orig else link})
     if not arts:
         return None, None, None
-    arts = auto_cat(arts)
-    df   = pd.DataFrame(arts)
-    period_str = f"{start_dt.strftime('%Y.%m.%d')} ~ {end_dt.strftime('%m.%d')}"
+    arts = auto_cat(arts, label=label)
     return arts, df, period_str
 
 
@@ -3319,7 +3337,7 @@ if st.session_state.get("auto_run_kw") and not st.session_state.get("auto_run_re
                          "감성":get_sentiment(_text),"카테고리":"",
                          "기자":_reporter,"링크":_orig if _orig else _link})
     if _res:
-        _res = auto_cat(_res)
+        _res = auto_cat(_res, label=_kw)
         _df  = pd.DataFrame(_res)
         _arts = _df.to_dict("records"); _total = len(_df); _cv = _df["감성"].value_counts()
         _pos_n = int(_cv.get("긍정",0)); _neg_n = int(_cv.get("부정",0)); _neu_n = int(_cv.get("중립",0))
@@ -3371,7 +3389,10 @@ elif run:
                 reporter=extract_reporter(title, desc)
                 all_res.append({"키워드그룹":lbl,"일자":ds,"월":ds[:7],"시간":hs,"매체":media,"등급":gi.get("grade","—"),"열독률":gi.get("rate",0.05),"헤드라인":title,"요약":summarize(desc,30),"감성":get_sentiment(text),"카테고리":"","기자":reporter,"링크":orig if orig else link})
     if not all_res: st.error("수집된 기사가 없습니다."); st.stop()
-    all_res = auto_cat(all_res)
+    # 키워드그룹별로 label을 전달하여 KEPCO 특화 카테고리 분기
+    for _a in all_res:
+        _a["카테고리"] = ""
+    all_res = auto_cat(all_res, label=" ".join([g["label"] for g in kw_groups]))
     all_res = [a for item in [apply_disambig([a],a["키워드그룹"]) for a in all_res] for a in item]
     df_all = pd.DataFrame(all_res)
     for g in kw_groups:
