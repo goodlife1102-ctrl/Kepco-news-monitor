@@ -651,6 +651,19 @@ def gen_criticisms(arts, kw):
 
 # ── 유틸 ──────────────────────────────────────────────
 def clean(t): return re.sub(r'<[^>]+>','',str(t)).strip()
+
+def extract_reporter(title, desc):
+    """헤드라인·description에서 기자명 추출. '홍길동 기자' 패턴."""
+    text = title + " " + desc
+    # 패턴1: [이름] 기자  (2~4글자 한글)
+    m = re.search(r'([가-힣]{2,4})\s*기자', text)
+    if m:
+        name = m.group(1)
+        # 오탐 방지: 일반 명사 제거
+        noise = {"특별","취재","전문","선임","수석","부장","차장","편집","논설","객원","사진","영상","온라인"}
+        if name not in noise:
+            return name
+    return "—"
 def get_media(o,l):
     url=o if o else l
     for d,n in MEDIA_MAP.items():
@@ -1204,11 +1217,12 @@ def _collect_news_for(label, days):
         orig  = a.get("originallink", ""); link = a.get("link", "")
         if not is_relevant(text): continue
         media = get_media(orig, link); gi = MEDIA_GRADE.get(media, {})
+        reporter = extract_reporter(title, desc)
         arts.append({"키워드그룹": label, "일자": ds, "월": ds[:7], "시간": hs,
                      "매체": media, "등급": gi.get("grade","—"), "열독률": gi.get("rate", 0.05),
                      "헤드라인": title, "요약": summarize(desc, 30),
                      "감성": get_sentiment(text), "카테고리": "",
-                     "기자": "—", "링크": orig if orig else link})
+                     "기자": reporter, "링크": orig if orig else link})
     if not arts:
         return None, None, None
     arts = auto_cat(arts)
@@ -2449,9 +2463,127 @@ def render_report(cd):
   </table>
 </div>""", unsafe_allow_html=True)
 
-    # ═══ 05. 매체×이슈 히트맵 ═══
-    st.markdown("<div style='margin-top:24px;'></div>", unsafe_allow_html=True)
-    divider("05 · 매체×이슈 부정 보도율 — 커서를 셀에 올리면 기사 확인")
+    # ═══ 05-B. 블랙리스트 기자 ═══
+    st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
+    divider("05-B · 부정 보도 집중 기자 — 블랙리스트")
+
+    df_rep = df[df["기자"] != "—"].copy()
+    if df_rep.empty:
+        st.caption("기자명 추출 데이터 없음 (네이버 뉴스 description에 '기자' 표기가 없는 경우)")
+    else:
+        rep_stats = []
+        for rep_name, grp in df_rep.groupby("기자"):
+            tot_r   = len(grp)
+            neg_r   = int((grp["감성"]=="부정").sum())
+            pos_r   = int((grp["감성"]=="긍정").sum())
+            neg_pct = neg_r / tot_r * 100
+            medias  = grp["매체"].value_counts().index[:2].tolist()
+            rep_stats.append((rep_name, tot_r, neg_r, pos_r, neg_pct, medias, grp))
+        # 부정 건수 3건 이상만, 부정 비율 내림차순
+        rep_stats = [r for r in rep_stats if r[2] >= 3]
+        rep_stats.sort(key=lambda x: (-x[2], -x[4]))
+        black_list = rep_stats[:8]   # 블랙리스트 상위 8명
+
+        if not black_list:
+            st.caption("부정 기사 3건 이상인 기자 없음")
+        else:
+            bl1, bl2 = st.columns(2)
+            with bl1:
+                st.markdown(
+                    f"<div style='background:#FFF5F5;border:1.5px solid #FFCDD2;border-radius:8px;"
+                    f"padding:10px;font-family:{FONT_KR};'>",
+                    unsafe_allow_html=True
+                )
+                st.markdown(
+                    f"<div style='font-size:12px;font-weight:800;color:#C62828;margin-bottom:6px;'>"
+                    f"🚨 부정 보도 집중 기자 TOP {min(len(black_list),8)}</div>",
+                    unsafe_allow_html=True
+                )
+
+                # 툴팁 CSS (재사용)
+                bl_css = f"""<style>
+.bl-tip {{ position:relative;display:inline-block;cursor:pointer; }}
+.bl-tip .bl-box {{
+  visibility:hidden;opacity:0;
+  background:#1a1a2e;color:#fff;font-size:10px;line-height:1.7;
+  border-radius:6px;padding:8px 10px;
+  position:absolute;z-index:999;bottom:120%;left:0;
+  width:300px;white-space:pre-line;
+  box-shadow:0 4px 14px rgba(0,0,0,.35);
+  transition:opacity .15s;font-family:{FONT_KR};pointer-events:none;
+}}
+.bl-tip:hover .bl-box {{ visibility:visible;opacity:1; }}
+</style>"""
+
+                bl_rows = ""
+                for rank_i, (rep_name, tot_r, neg_r, pos_r, neg_pct, medias, grp) in enumerate(black_list, 1):
+                    media_str = " · ".join(medias)
+                    gi_r = MEDIA_GRADE.get(medias[0] if medias else "", {})
+                    grade_r = gi_r.get("grade","")
+                    gc_r = GRADE_COLOR.get(grade_r,"#aaa")
+                    badge_r = (f"<span style='background:{gc_r};color:white;padding:0 3px;"
+                               f"border-radius:2px;font-size:8px;font-weight:700;'>{grade_r}</span> ") if grade_r else ""
+
+                    # 툴팁 기사 목록
+                    neg_arts = grp[grp["감성"]=="부정"].sort_values("일자", ascending=False)
+                    tip_lines = "\n".join([
+                        f"· {r['일자']}  [{r['매체']}]  {r['헤드라인'][:20]}"
+                        for _, r in neg_arts.head(5).iterrows()
+                    ])
+                    tip_content = f"부정 기사 {neg_r}건\n──────────────\n{tip_lines}"
+
+                    bar_w = int(neg_pct)
+                    bl_rows += f"""<tr style='border-bottom:1px solid #FFE0E0;'>
+  <td style='padding:6px 6px;font-size:11px;color:#888;text-align:center;font-weight:700;'>{rank_i}</td>
+  <td style='padding:6px 8px;'>
+    <div class='bl-tip'>
+      <span style='font-size:12px;font-weight:800;color:#C62828;'>{rep_name} 기자</span>
+      <span class='bl-box'>{tip_content}</span>
+    </div>
+    <div style='font-size:9px;color:#888;margin-top:1px;'>{badge_r}{media_str}</div>
+  </td>
+  <td style='padding:6px 8px;text-align:center;'>
+    <span style='font-size:13px;font-weight:800;color:#C62828;'>{neg_r}</span>
+    <span style='font-size:9px;color:#aaa;'>/{tot_r}건</span>
+  </td>
+  <td style='padding:6px 8px;min-width:80px;'>
+    <div style='background:#f5f5f5;border-radius:4px;height:7px;'>
+      <div style='background:#C62828;width:{bar_w}%;height:7px;border-radius:4px;'></div>
+    </div>
+    <div style='font-size:9px;color:#C62828;font-weight:700;margin-top:1px;'>{neg_pct:.0f}%</div>
+  </td>
+</tr>"""
+
+                st.markdown(
+                    f"""{bl_css}<table style='width:100%;border-collapse:collapse;font-family:{FONT_KR};'>
+  <tr style='background:#FFEBEE;font-size:10px;color:#888;'>
+    <th style='padding:4px 6px;'>#</th>
+    <th style='padding:4px 8px;text-align:left;'>기자 / 매체</th>
+    <th style='padding:4px 8px;'>부정건수</th>
+    <th style='padding:4px 8px;text-align:left;'>부정비율</th>
+  </tr>
+  {bl_rows}
+</table>""",
+                    unsafe_allow_html=True
+                )
+                st.markdown("</div>", unsafe_allow_html=True)
+
+            with bl2:
+                st.markdown(
+                    f"""<div style='background:#F8F9FA;border:1px solid #ddd;border-radius:8px;
+padding:14px 16px;font-family:{FONT_KR};font-size:11px;line-height:1.9;color:#444;'>
+<div style='font-size:12px;font-weight:800;color:#003366;margin-bottom:8px;'>📋 블랙리스트 기자 활용 가이드</div>
+<div style='margin-bottom:6px;'><b style='color:#C62828;'>①</b> 커서를 기자명에 올리면 해당 기사 목록 확인</div>
+<div style='margin-bottom:6px;'><b style='color:#C62828;'>②</b> 해당 기자 취재 시 사실관계 자료 선제 제공</div>
+<div style='margin-bottom:6px;'><b style='color:#C62828;'>③</b> 보도자료 배포 시 우선 배제 또는 별도 관리</div>
+<div style='margin-bottom:6px;'><b style='color:#C62828;'>④</b> 동일 매체 내 우호 기자와 관계 집중 강화</div>
+<div style='margin-top:10px;background:#FFF8E1;border-left:3px solid #F9A825;
+padding:7px 10px;border-radius:0 4px 4px 0;font-size:10px;color:#777;'>
+⚠️ 기자명은 description의 '홍길동 기자' 패턴으로 자동 추출합니다.
+매체에 따라 미표기되는 경우가 있어 일부 누락될 수 있습니다.</div>
+</div>""",
+                    unsafe_allow_html=True
+                )
     fig_hm = plot_heatmap_with_hover(df)
     if fig_hm:
         st.plotly_chart(fig_hm, use_container_width=True, config=cfg())
@@ -3114,7 +3246,8 @@ if run:
                 if not is_relevant(text): continue
                 if g["type"]=="AND" and not matches_and(text,g): continue
                 media=get_media(orig,link); gi=MEDIA_GRADE.get(media,{})
-                all_res.append({"키워드그룹":lbl,"일자":ds,"월":ds[:7],"시간":hs,"매체":media,"등급":gi.get("grade","—"),"열독률":gi.get("rate",0.05),"헤드라인":title,"요약":summarize(desc,30),"감성":get_sentiment(text),"카테고리":"","기자":"—","링크":orig if orig else link})
+                reporter=extract_reporter(title, desc)
+                all_res.append({"키워드그룹":lbl,"일자":ds,"월":ds[:7],"시간":hs,"매체":media,"등급":gi.get("grade","—"),"열독률":gi.get("rate",0.05),"헤드라인":title,"요약":summarize(desc,30),"감성":get_sentiment(text),"카테고리":"","기자":reporter,"링크":orig if orig else link})
     if not all_res: st.error("수집된 기사가 없습니다."); st.stop()
     all_res = auto_cat(all_res)
     all_res = [a for item in [apply_disambig([a],a["키워드그룹"]) for a in all_res] for a in item]
