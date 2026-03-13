@@ -32,6 +32,7 @@ except:
 # ── 보안: API 키는 Streamlit Secrets에서 로드 ──────────
 CLIENT_ID     = st.secrets["NAVER_CLIENT_ID"]
 CLIENT_SECRET = st.secrets["NAVER_CLIENT_SECRET"]
+APP_URL       = st.secrets.get("APP_URL", "https://kepco-news-monitor-gbff2xm5nzatkkmvjsd9tm.streamlit.app")
 FONT_KR = "'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', Arial, sans-serif"
 
 MEDIA_GRADE = {
@@ -900,7 +901,7 @@ def build_email_html(arts, df, label, period_str):
         more_row = f"""<tr>
           <td colspan='6' style='text-align:center;padding:14px;background:#F4F6F9;'>
             <span style='font-size:12px;color:#888;'>10건만 표시 중 &nbsp;|&nbsp; 나머지 <b style='color:#003366;'>{remain}건</b>은 앱에서 확인하세요</span><br>
-            <span style='display:inline-block;margin-top:8px;background:#003366;color:white;padding:7px 20px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:.3px;'>⚡ 전체 기사 {total}건 앱에서 보기 →</span>
+            <a href='{APP_URL}' target='_blank' style='display:inline-block;margin-top:8px;background:#003366;color:white;padding:7px 20px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:.3px;text-decoration:none;'>⚡ 전체 기사 {total}건 앱에서 보기 →</a>
           </td>
         </tr>"""
 
