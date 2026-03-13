@@ -3125,14 +3125,7 @@ with st.sidebar:
                 if "del_checks" not in st.session_state:
                     st.session_state.del_checks = {}
 
-                # 헤더
-                _hc = st.columns([0.4, 2.2, 2.5, 0.8, 1.4, 1.2])
-                for _hcol, _hlbl in zip(_hc, ["선택","이메일","키워드","발송시각","기준일/주기","발송"]):
-                    _hcol.markdown(
-                        f"<div style='font-size:9px;font-weight:700;color:white;background:#003366;"
-                        f"padding:5px 4px;text-align:center;'>{ _hlbl}</div>",
-                        unsafe_allow_html=True
-                    )
+                # 헤더 없이 바로 데이터 행 시작
 
                 for idx_s, s in enumerate(adm_subs):
                     email_key = s["email"].lower()
