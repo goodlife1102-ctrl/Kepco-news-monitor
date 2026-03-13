@@ -3120,58 +3120,85 @@ with st.sidebar:
                     f"font-family:{FONT_KR};'>구독자 목록 ({len(adm_subs)}명)</div>",
                     unsafe_allow_html=True
                 )
-                # ── 체크박스 + 구독자 테이블 ──
+                # ── 구독자 테이블 (재디자인) ──
                 if "del_checks" not in st.session_state:
                     st.session_state.del_checks = {}
 
-                # 헤더 행
-                hd1, hd2, hd3, hd4, hd5, hd6 = st.columns([0.5, 3, 3, 1.2, 2, 0.5])
-                hd1.markdown("<div style='font-size:9px;color:#888;'>선택</div>", unsafe_allow_html=True)
-                hd2.markdown("<div style='font-size:9px;color:#888;font-weight:700;'>이메일</div>", unsafe_allow_html=True)
-                hd3.markdown("<div style='font-size:9px;color:#888;font-weight:700;'>키워드</div>", unsafe_allow_html=True)
-                hd4.markdown("<div style='font-size:9px;color:#888;font-weight:700;'>발송시각</div>", unsafe_allow_html=True)
-                hd5.markdown("<div style='font-size:9px;color:#888;font-weight:700;'>기준일 / 주기</div>", unsafe_allow_html=True)
-                hd6.markdown("<div style='font-size:9px;color:#888;font-weight:700;'>발송</div>", unsafe_allow_html=True)
-                st.markdown("<hr style='margin:2px 0 4px;border-color:#ddd;'>", unsafe_allow_html=True)
+                # 헤더
+                _hc = st.columns([0.4, 2.2, 2.5, 0.8, 1.4, 1.2])
+                for _hcol, _hlbl in zip(_hc, ["선택","이메일","키워드","발송시각","기준일/주기","발송"]):
+                    _hcol.markdown(
+                        f"<div style='font-size:9px;font-weight:700;color:white;background:#003366;"
+                        f"padding:5px 4px;text-align:center;'>{ _hlbl}</div>",
+                        unsafe_allow_html=True
+                    )
 
                 for idx_s, s in enumerate(adm_subs):
                     email_key = s["email"].lower()
-                    c1, c2, c3, c4, c5, c6 = st.columns([0.5, 3, 3, 1.2, 2, 0.5])
+                    row_bg = "#FAFAFA" if idx_s % 2 == 0 else "white"
+                    kw  = s.get("keyword", "—")
+                    co  = s.get("company_name", "")
+                    co_badge = (
+                        f" <span style='background:#E8EAF6;color:#3949AB;font-size:8px;"
+                        f"padding:1px 5px;border-radius:10px;'>📌{co}</span>"
+                    ) if co else ""
+                    d_val    = s.get("days", 1)
+                    freq_lbl = {1:"매일",2:"2일마다",3:"3일마다",7:"1주일마다",30:"1개월마다"}.get(d_val, f"{d_val}일마다")
+                    sdate    = s.get("start_date") or (s.get("joined_at","")[:10] if s.get("joined_at") else "—")
+                    sdate_fmt = sdate.replace("-",".") if sdate and sdate != "—" else "—"
+                    hhmm     = f"{s.get('send_hour',6):02d}:{s.get('send_minute',30):02d}"
+
+                    c1, c2, c3, c4, c5, c6 = st.columns([0.4, 2.2, 2.5, 0.8, 1.4, 1.2])
                     with c1:
                         checked = st.checkbox("", key=f"del_chk_{idx_s}",
                                               value=st.session_state.del_checks.get(email_key, False),
                                               label_visibility="collapsed")
                         st.session_state.del_checks[email_key] = checked
                     with c2:
-                        st.markdown(f"<div style='font-size:10px;padding-top:6px;word-break:break-all;'>{s['email']}</div>", unsafe_allow_html=True)
+                        st.markdown(
+                            f"<div style='font-size:10px;padding:8px 4px;word-break:break-all;"
+                            f"min-height:44px;border-bottom:1px solid #eee;'>{s['email']}</div>",
+                            unsafe_allow_html=True)
                     with c3:
-                        kw = s.get("keyword","—")
-                        co = s.get("company_name","")
-                        co_badge = (f" <span style='background:#E8EAF6;color:#3949AB;font-size:8px;"
-                                    f"padding:1px 4px;border-radius:3px;'>📌{co}</span>") if co else ""
-                        st.markdown(f"<div style='font-size:10px;padding-top:6px;color:#003366;font-weight:700;'>{kw}{co_badge}</div>", unsafe_allow_html=True)
+                        st.markdown(
+                            f"<div style='font-size:10px;padding:8px 4px;color:#003366;font-weight:700;"
+                            f"min-height:44px;border-bottom:1px solid #eee;'>{kw}{co_badge}</div>",
+                            unsafe_allow_html=True)
                     with c4:
-                        st.markdown(f"<div style='font-size:11px;padding-top:6px;text-align:center;'>"
-                                    f"{s.get('send_hour',6):02d}:{s.get('send_minute',30):02d}</div>", unsafe_allow_html=True)
+                        st.markdown(
+                            f"<div style='font-size:11px;padding:10px 4px;text-align:center;font-weight:600;"
+                            f"min-height:44px;border-bottom:1px solid #eee;'>{hhmm}</div>",
+                            unsafe_allow_html=True)
                     with c5:
-                        d_val = s.get("days", 1)
-                        freq_lbl = {1:"매일", 2:"2일마다", 3:"3일마다", 7:"1주일마다", 30:"1개월마다"}.get(d_val, f"{d_val}일마다")
-                        sdate = s.get("start_date") or (s.get("joined_at","")[:10] if s.get("joined_at") else "—")
-                        sdate_fmt = sdate.replace("-",".") if sdate != "—" else "—"
-                        st.markdown(f"<div style='font-size:10px;padding-top:4px;color:#333;'>"
-                                    f"<span style='color:#1565C0;font-weight:700;'>{sdate_fmt}부터</span><br>"
-                                    f"<span style='color:#555;'>{freq_lbl}</span></div>", unsafe_allow_html=True)
+                        st.markdown(
+                            f"<div style='font-size:10px;padding:6px 4px;text-align:center;"
+                            f"min-height:44px;border-bottom:1px solid #eee;'>"
+                            f"<span style='color:#1565C0;font-weight:700;'>{sdate_fmt}부터</span><br>"
+                            f"<span style='color:#666;'>{freq_lbl}</span></div>",
+                            unsafe_allow_html=True)
                     with c6:
-                        if st.button("📤", key=f"ind_send_{idx_s}", help=f"{s['email']}에게 즉시 발송"):
-                            adm_now = load_sub()
+                        if st.button("📤 발송", key=f"ind_send_{idx_s}", use_container_width=True):
+                            adm_now  = load_sub()
                             test_msg = st.session_state.get("admin_test_msg", "")
                             with st.spinner(f"{s['email']} 발송 중..."):
                                 ok_i, msg_i = send_email_report(adm_now, test_addr=s["email"],
                                                                 custom_message=test_msg, is_broadcast_test=True)
-                            if ok_i: st.success(f"✅ {s['email']} 발송 완료")
-                            else:    st.error(f"❌ {msg_i}")
+                            if ok_i:
+                                st.toast(f"✅ 발송 완료", icon="✅")
+                            else:
+                                st.session_state[f"send_err_{idx_s}"] = msg_i
 
-                st.markdown("<hr style='margin:4px 0 6px;border-color:#eee;'>", unsafe_allow_html=True)
+                    # 발송 실패 메시지 — 전체 너비 별도 행
+                    if st.session_state.get(f"send_err_{idx_s}"):
+                        _e1, _e2 = st.columns([5, 1])
+                        with _e1:
+                            st.error(f"❌ 발송 실패 ({s['email']}): {st.session_state[f'send_err_{idx_s}']}")
+                        with _e2:
+                            if st.button("닫기", key=f"err_close_{idx_s}", use_container_width=True):
+                                del st.session_state[f"send_err_{idx_s}"]; st.rerun()
+
+                st.markdown("<div style='height:6px;background:#e8e8e8;border-radius:0 0 4px 4px;margin-bottom:8px;'></div>", unsafe_allow_html=True)
+
 
                 # ── 일괄 삭제 버튼 ──
                 selected_emails = [email for email, chk in st.session_state.del_checks.items() if chk]
