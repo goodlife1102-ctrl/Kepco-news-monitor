@@ -914,7 +914,7 @@ def build_email_html(arts, df, label, period_str):
         more_row = f"""<tr>
           <td colspan='6' style='text-align:center;padding:14px;background:#F4F6F9;'>
             <span style='font-size:12px;color:#888;'>10건만 표시 중 &nbsp;|&nbsp; 나머지 <b style='color:#003366;'>{remain}건</b>은 앱에서 확인하세요</span><br>
-            <a href='{APP_URL}' target='_blank' style='display:inline-block;margin-top:8px;background:#003366;color:white;padding:7px 20px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:.3px;text-decoration:none;'>⚡ 전체 기사 {total}건 앱에서 보기 →</a>
+            <a href='{APP_URL}?kw={requests.utils.quote(label)}&days={days}' target='_blank' style='display:inline-block;margin-top:8px;background:#003366;color:white;padding:7px 20px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:.3px;text-decoration:none;'>⚡ 전체 기사 {total}건 앱에서 보기 →</a>
           </td>
         </tr>"""
 
@@ -2930,6 +2930,16 @@ st.markdown(mhdr(md), unsafe_allow_html=True)
 
 with st.sidebar:
     st.markdown(f"<h3 style='font-family:{FONT_KR};'>분석 설정</h3>", unsafe_allow_html=True)
+
+    # ── URL 쿼리 파라미터 자동 분석 ──
+    _qp = st.query_params
+    _auto_kw   = _qp.get("kw", "")
+    _auto_days = int(_qp.get("days", 1))
+    if _auto_kw and "auto_run_done" not in st.session_state:
+        st.session_state["auto_run_kw"]   = _auto_kw
+        st.session_state["auto_run_days"] = _auto_days
+        st.session_state["auto_run_done"] = True
+
     with st.form("mf", clear_on_submit=False):
         kc1s,kc2s = st.columns([5,1])
         with kc1s: keywords_input = st.text_input("🔍 키워드 (Enter=분석)", "", placeholder="키워드 입력 후 Enter")
@@ -3257,7 +3267,65 @@ with st.sidebar:
             )
 
 
-if run:
+# ── URL 파라미터 자동 분석 실행 ──
+if st.session_state.get("auto_run_kw") and not st.session_state.get("auto_run_rendered"):
+    st.session_state["auto_run_rendered"] = True
+    _kw   = st.session_state["auto_run_kw"]
+    _days = st.session_state.get("auto_run_days", 1)
+    _end  = (datetime.utcnow() + timedelta(hours=9)).date()
+    _start = _end - timedelta(days=max(1, int(_days)))
+    with st.spinner(f"'{_kw}' 자동 분석 중..."):
+        _g = parse_kw(_kw)[0]
+        _raw = get_news(" ".join(_g["keywords"]), 1000)
+        _res = []
+        for _a in _raw:
+            _pub = _a.get("pubDate","")
+            try:
+                _ad = datetime.strptime(_pub[:16], "%a, %d %b %Y").date()
+                if not (_start <= _ad <= _end): continue
+                _ds = _ad.strftime("%Y-%m-%d"); _hs = _pub[17:19] if len(_pub)>18 else "00"
+            except: _ds = _pub[:10]; _hs = "00"
+            _title = clean(_a.get("title","")); _desc = clean(_a.get("description",""))
+            _text  = _title + " " + _desc
+            if not is_relevant(_text): continue
+            _media = get_media(_a.get("originallink",""), _a.get("link",""))
+            _gi    = MEDIA_GRADE.get(_media, {})
+            _reporter = extract_reporter(_title, _desc)
+            _orig = _a.get("originallink",""); _link = _a.get("link","")
+            _res.append({"키워드그룹":_kw,"일자":_ds,"월":_ds[:7],"시간":_hs,
+                         "매체":_media,"등급":_gi.get("grade","—"),"열독률":_gi.get("rate",0.05),
+                         "헤드라인":_title,"요약":summarize(_desc,30),
+                         "감성":get_sentiment(_text),"카테고리":"",
+                         "기자":_reporter,"링크":_orig if _orig else _link})
+    if _res:
+        _res = auto_cat(_res)
+        _df  = pd.DataFrame(_res)
+        _arts = _df.to_dict("records"); _total = len(_df); _cv = _df["감성"].value_counts()
+        _pos_n = int(_cv.get("긍정",0)); _neg_n = int(_cv.get("부정",0)); _neu_n = int(_cv.get("중립",0))
+        _period_str = f"{_start.strftime('%Y.%m.%d')} ~ {_end.strftime('%m.%d')}"
+        _tnc = _df[_df["감성"]=="부정"]["카테고리"].value_counts().index[0] if _neg_n>0 else "없음"
+        _tpc = _df[_df["감성"]=="긍정"]["카테고리"].value_counts().index[0] if _pos_n>0 else "없음"
+        _nk  = extract_kws(_arts,"부정"); _pk = extract_kws(_arts,"긍정")
+        _tnkw = _nk[0][0] if _nk else None
+        _daily = _df.groupby("일자").size()
+        _tt = f"총 {_total}건"
+        _it = f"'{_kw}' 분석 결과, '{_tnc}' 이슈 중심으로 부정 언론 환경이 형성되어 선제적 대응이 필요합니다."
+        _crs = gen_criticisms(_arts, _kw)
+        _neg_med = [m for m,_ in _df[_df["감성"]=="부정"]["매체"].value_counts().head(5).items()]
+        _pr_s, _pr_l, _pr_c = calc_pr_risk(_neg_n, _total, _nk, False, _neg_med)
+        _ck = f"{_kw}_{_period_str}"
+        _cd = {"label":_kw,"period_str":_period_str,"df":_df,"articles":_arts,"total":_total,
+               "pos_n":_pos_n,"neg_n":_neg_n,"neu_n":_neu_n,"neg_kws":_nk,"neu_kws":[],
+               "pos_kws":_pk,"top_neg_kw":_tnkw,"criticisms":_crs,"insights_text":_it,
+               "top_neg_cat":_tnc,"top_pos_cat":_tpc,"top3_media":"","trend_txt":_tt,
+               "crisis_kws":[],"pr_score":_pr_s,"pr_lvl":_pr_l,"pr_color":_pr_c}
+        st.session_state.analysis_cache[_ck] = _cd
+        st.session_state.active_key = _ck
+        render_report(_cd)
+    else:
+        st.warning(f"'{_kw}' 관련 기사가 없습니다.")
+
+elif run:
 
     st.session_state.active_key = None
     kw_groups = parse_kw(keywords_input)
