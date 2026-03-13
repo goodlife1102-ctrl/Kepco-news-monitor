@@ -450,67 +450,67 @@ def _extract_core_issue(headlines):
 # ── 카테고리별 고정 전략 테이블 (카테고리가 1차 기준) ──────────────
 _CAT_STRATEGY = {
     "전기요금": {
-        "action_tpl": "{kw} 관련 원가·지원 실적 팩트시트 즉시 배포",
+        "action_tpl": "원가·지원 실적 팩트시트 즉시 배포",
         "msg":    "요금·가격 이슈는 감정이 아닌 숫자로 설득해야 한다. 원가 대비 현실화 수치와 지원 실적이 설득의 무기다.",
         "steps":  ["원가·지원 실적 수치화 자료 즉시 배포", "취약 계층 지원 성과 스토리 발굴·배포", "핵심 매체 1:1 설명회 개최"],
     },
     "재무·경영": {
-        "action_tpl": "{kw} 개선 지표 — 전기 대비 변화폭 중심 선제 공개",
+        "action_tpl": "전기 대비 재무 개선 수치 중심으로 선제 공개",
         "msg":    "재무 보도에는 '얼마나 줄었나'를 먼저 말해야 한다. 과거 대비 개선폭이 핵심이다.",
         "steps":  ["부채 감축·효율화 실적 정량 보도자료 발표", "경영 효율화 구체 사례 스토리텔링", "경제지 전담 기자 관계 집중 강화"],
     },
     "노사관계": {
-        "action_tpl": "협상 현황 정기 브리핑으로 {kw} 관련 루머 선제 차단",
+        "action_tpl": "협상 현황 정기 브리핑으로 루머 선제 차단",
         "msg":    "파업·갈등 보도는 공공서비스 불안으로 프레임이 전환된다. 침묵은 최악이다.",
         "steps":  ["협상 진행 상황 주 1회 정기 브리핑 실시", "공공서비스 정상 유지 메시지 선점", "노사 공동 성명 또는 협의 시그널 제공"],
     },
     "안전·사고": {
-        "action_tpl": "{kw} 관련 사고 원인·재발방지책 48시간 내 공식 발표",
+        "action_tpl": "사고 원인·재발방지책 48시간 내 공식 발표",
         "msg":    "안전 이슈는 '얼마나 빨리, 얼마나 구체적으로' 대응하느냐가 2차 피해를 막는다.",
         "steps":  ["사고 원인 및 재발방지책 48시간 내 발표", "현장 안전 투자 금액·건수 데이터 동시 제공", "협력업체 포함 안전망 확대 조치 공표"],
     },
     "전력망·설비": {
-        "action_tpl": "{kw} 설비 현대화 로드맵·투자 계획 수치 중심 공개",
+        "action_tpl": "설비 현대화 로드맵·투자 계획 수치 중심으로 공개",
         "msg":    "'문제 있다'는 언론보다 '우리가 먼저 알고 고치고 있다'는 메시지가 우선이다.",
         "steps":  ["투자 계획·진행 현황 수치 중심 보도자료", "정전 원인 신속 공개 및 복구 타임라인 제시", "스마트그리드·디지털 전환 성과 홍보"],
     },
     "탄소중립·에너지전환": {
-        "action_tpl": "{kw} 관련 온실가스 감축 실적·재생에너지 투자 정량 공개",
+        "action_tpl": "온실가스 감축 실적·재생에너지 투자 정량 공개",
         "msg":    "추상적 목표보다 '작년 대비 몇% 줄었다'는 구체 숫자가 신뢰를 만든다.",
         "steps":  ["온실가스 감축 실적 정량 공개", "재생에너지 투자·발전량 구체 수치 제시", "국제 협약 대비 성과 비교 자료 제공"],
     },
     "공기업·거버넌스": {
-        "action_tpl": "{kw} 관련 감사 결과 자진 공개 및 재발방지 조치 발표",
+        "action_tpl": "감사 결과 자진 공개 및 재발방지 조치 즉시 발표",
         "msg":    "비리·특혜 의혹은 숨기면 더 크게 터진다. 먼저 공개하는 것이 신뢰 회복의 시작이다.",
         "steps":  ["감사 결과 자진 공개로 선제 대응", "구체적 윤리경영 조치 언론 제공", "외부 제3자 검증 활용으로 신뢰성 확보"],
     },
     "정책·규제": {
-        "action_tpl": "{kw} 관련 법무팀 공식 입장 24시간 내 발표 및 사실관계 선제 공개",
+        "action_tpl": "법무팀 공식 입장 24시간 내 발표 및 사실관계 선제 공개",
         "msg":    "'법적 대응'보다 '적극 협조·투명하게 소명' 메시지가 여론에 유리하다.",
         "steps":  ["법무팀 공식 입장 즉시 발표", "사실 관계 오보 정정 요청 적극 집행", "조사 협조 의지·투명성 강조 메시지 선점"],
     },
     "원전·수출": {
-        "action_tpl": "{kw} 관련 계약·협상 진행 상황 정기 업데이트 공개",
+        "action_tpl": "계약·협상 진행 상황 정기 업데이트 공개",
         "msg":    "불확실성이 비판을 낳는다. 알려줄 수 있는 정보는 먼저 알려라. 협상 진행 상황 정기 업데이트가 신뢰의 핵심이다.",
         "steps":  ["계약·협상 진행 상황 정기 업데이트 공개", "안전 기준·국제 인증 현황 구체 자료 제공", "기존 성공 사례 집중 레퍼런스화"],
     },
     "AI·디지털혁신": {
-        "action_tpl": "{kw} 도입 전후 효율 지표 수치 비교 보도자료 배포",
+        "action_tpl": "도입 전후 효율 지표 수치 비교 보도자료 배포",
         "msg":    "'AI 도입'이 아니라 '덕분에 이렇게 달라졌다'는 Before-After 스토리가 효과적이다.",
         "steps":  ["AI 도입 전후 효율 지표 수치 비교 자료", "구체적 서비스 개선 사례(응답시간·오류율) 제시", "보안·개인정보 보호 조치 별도 홍보"],
     },
     "수출·글로벌": {
-        "action_tpl": "{kw} 관련 계약·협상 진행 상황 정기 업데이트 공개",
+        "action_tpl": "계약·협상 진행 상황 정기 업데이트 공개",
         "msg":    "불확실성이 비판을 낳는다. 알려줄 수 있는 정보는 먼저 알려라. 진행 현황 업데이트가 신뢰의 핵심이다.",
         "steps":  ["계약·협상 진행 상황 정기 업데이트 공개", "실적·성과 데이터 구체 수치로 제시", "기존 성공 사례 집중 레퍼런스화"],
     },
     "기술·R&D": {
-        "action_tpl": "{kw} 관련 기술 성과·투자 실적 정량 데이터 공개",
+        "action_tpl": "기술 성과·투자 실적 정량 데이터 공개",
         "msg":    "기술 이슈는 추상적 설명보다 '전후 비교 수치'가 신뢰를 만든다.",
         "steps":  ["기술 성과 전후 비교 데이터 보도자료 배포", "핵심 연구 사례 스토리화", "전문 매체 특별 브리핑 개최"],
     },
     "환경·ESG": {
-        "action_tpl": "{kw} 관련 환경·ESG 이행 실적 정량 공개",
+        "action_tpl": "환경·ESG 이행 실적 정량 공개",
         "msg":    "추상적 목표보다 '실제 측정 수치'가 신뢰를 만든다.",
         "steps":  ["이행 실적 정량 공개", "국제 기준 대비 성과 비교 자료 제공", "ESG 로드맵 업데이트 공개"],
     },
@@ -525,11 +525,10 @@ def _build_dynamic_insight(cat, headlines, found_issues, label):
     # 카테고리가 테이블에 있으면 무조건 그 전략 사용 (중복 방지의 핵심)
     if cat in _CAT_STRATEGY:
         tpl = _CAT_STRATEGY[cat]
-        action = tpl["action_tpl"].replace("{kw}", kw)
+        action = tpl["action_tpl"]  # {kw} 없이 그대로 사용
         msg    = tpl["msg"]
         steps  = list(tpl["steps"])
 
-        # 헤드라인 패턴으로 추가 보강 (동일 카테고리라도 기사 내용이 다르면 action 앞에 컨텍스트 추가)
         if "수사·법적 리스크" in found_issues and cat not in ("정책·규제", "공기업·거버넌스"):
             action = f"[수사 대응 긴급] {action}"
         elif "안전사고" in found_issues and cat != "안전·사고":
@@ -595,16 +594,14 @@ def gen_criticisms(arts, kw):
     cat_c = Counter([a["카테고리"] for a in neg])
 
     def _dynamic_title(cat, cat_arts, kw_label):
-        """해당 카테고리 기사의 실제 상위 부정키워드로 이슈 제목 생성"""
+        """카테고리 + 핵심 부정키워드로 간결한 이슈 제목 생성 (키워드 꺽쇠 없음)"""
         cat_text = " ".join([a.get("헤드라인","") + " " + a.get("요약","") for a in cat_arts])
         neg_kw_cnt = {w: cat_text.count(w) for w in NEGATIVE_WORDS if cat_text.count(w) > 0}
         top_neg = sorted(neg_kw_cnt.items(), key=lambda x: -x[1])
-        # 상위 부정 키워드가 있으면 「키워드」 논란/비판 형태로 제목 구성
         if top_neg:
             core = top_neg[0][0]
-            return f"「{kw_label}」 {core} 관련 {cat} 비판"
-        # 없으면 카테고리명만으로 구성
-        return f"「{kw_label}」 {cat} 관련 부정 보도"
+            return f"{core} 관련 {cat} 비판"
+        return f"{cat} 비판 보도"
 
     result = []
     for cat, cnt2 in cat_c.most_common(8):
@@ -644,15 +641,15 @@ def gen_criticisms(arts, kw):
                 break
         while len(result) < 3 and other_hs:
             pts = [h[:32] + ("..." if len(h) > 32 else "") for h in other_hs[:2]]
-            result.append({"title": f"「{kw}」 기타 부정 보도 동향", "points": pts,
+            result.append({"title": "기타 부정 보도 동향", "points": pts,
                            "dots": 2, "category": "기타", "headlines": other_hs[:3]})
             other_hs = other_hs[2:]
 
     # placeholder 보충
     fallbacks = [
-        {"title": f"「{kw}」 커뮤니케이션 대응 필요",  "points": ["신속 대응 체계 점검 필요", "공식 채널 속도 개선 필요"], "dots": 2, "category": "기타", "headlines": []},
-        {"title": f"「{kw}」 미디어 관계 강화 필요",   "points": ["전담 기자 관계 구축", "정기 브리핑 채널 점검"],      "dots": 2, "category": "기타", "headlines": []},
-        {"title": f"「{kw}」 이해관계자 소통 강화 필요","points": ["이슈별 공식 대응 창구 일원화 필요"],               "dots": 2, "category": "기타", "headlines": []},
+        {"title": "커뮤니케이션 대응 필요",  "points": ["신속 대응 체계 점검 필요", "공식 채널 속도 개선 필요"], "dots": 2, "category": "기타", "headlines": []},
+        {"title": "미디어 관계 강화 필요",   "points": ["전담 기자 관계 구축", "정기 브리핑 채널 점검"],      "dots": 2, "category": "기타", "headlines": []},
+        {"title": "이해관계자 소통 강화 필요","points": ["이슈별 공식 대응 창구 일원화 필요"],               "dots": 2, "category": "기타", "headlines": []},
     ]
     i = 0
     while len(result) < 3 and i < len(fallbacks):
@@ -2699,63 +2696,64 @@ padding:7px 10px;border-radius:0 4px 4px 0;font-size:10px;color:#777;'>
     divider("08 · 비판 포인트 & 대응 전략")
     paired = gen_paired_insights(criticisms)
 
-    # 레이더차트: 카테고리별 부정 건수 기반 6각형
+    # 레이더차트: 카테고리별 부정 건수 기반 5각형
     cat_labels_all = list(TOPIC_GROUPS.keys())
     cat_neg_counts = {cat: int(df[(df['카테고리']==cat)&(df['감성']=='부정')].shape[0]) for cat in cat_labels_all}
     cat_neg_sorted = sorted(cat_neg_counts.items(), key=lambda x: -x[1])
-    radar_cats = [c for c,v in cat_neg_sorted if v > 0][:6]
+    radar_cats = [c for c,v in cat_neg_sorted if v > 0][:5]
     if len(radar_cats) < 3:
-        radar_cats = [c for c,v in cat_neg_sorted][:6]
+        radar_cats = [c for c,v in cat_neg_sorted][:5]
     radar_vals = [cat_neg_counts.get(c, 0) for c in radar_cats]
     max_v = max(radar_vals) if radar_vals else 1
     max_v = max_v if max_v > 0 else 1
     radar_norm = [round(v/max_v*5, 1) for v in radar_vals]
 
-    # 레이더 Plotly
+    # 레이더 Plotly — 5각형
     radar_labels_short = [c[:7] for c in radar_cats]
     fig_radar = go.Figure()
     fig_radar.add_trace(go.Scatterpolar(
         r=radar_norm + [radar_norm[0]],
         theta=radar_labels_short + [radar_labels_short[0]],
         fill='toself',
-        fillcolor='rgba(198,40,40,0.15)',
-        line=dict(color='#C62828', width=2),
-        marker=dict(size=7, color='#C62828'),
+        fillcolor='rgba(198,40,40,0.18)',
+        line=dict(color='#C62828', width=2.5),
+        marker=dict(size=8, color='#C62828'),
         name='비판 강도',
-        hovertemplate='<b>%{theta}</b><br>강도: %{r:.1f}/5<br>' +
-            '<br>'.join([f"{radar_cats[i]}: {radar_vals[i]}건" for i in range(len(radar_cats))]) + '<extra></extra>',
+        hovertemplate='<b>%{theta}</b><br>강도: %{r:.1f}/5<extra></extra>',
     ))
-    # 평균 라인
     avg_v = sum(radar_norm)/len(radar_norm) if radar_norm else 2.5
     fig_radar.add_trace(go.Scatterpolar(
         r=[avg_v]*len(radar_labels_short) + [avg_v],
         theta=radar_labels_short + [radar_labels_short[0]],
         mode='lines',
-        line=dict(color='#003366', width=1, dash='dot'),
+        line=dict(color='#003366', width=1.5, dash='dot'),
         name='평균',
         hoverinfo='skip',
     ))
     fig_radar.update_layout(
         polar=dict(
-            radialaxis=dict(visible=True, range=[0, 5], tickfont=dict(size=9), showticklabels=True, gridcolor='#eee'),
-            angularaxis=dict(tickfont=dict(size=11, family=FONT_KR, color='#333'), gridcolor='#eee'),
+            radialaxis=dict(visible=True, range=[0, 5], tickfont=dict(size=9), showticklabels=True, gridcolor='#ddd'),
+            angularaxis=dict(tickfont=dict(size=11, family=FONT_KR, color='#222'), gridcolor='#ddd'),
             bgcolor='white',
         ),
-        showlegend=False,
+        showlegend=True,
+        legend=dict(orientation='h', y=-0.12, x=0.5, xanchor='center', font=dict(size=11, family=FONT_KR),
+                    bgcolor='rgba(255,255,255,0.8)', bordercolor='#ddd', borderwidth=1),
         paper_bgcolor='white',
         font=dict(family=FONT_KR),
-        margin=dict(l=40, r=40, t=30, b=30),
-        height=360,
+        margin=dict(l=45, r=45, t=50, b=55),
+        height=310,
         title=dict(text=f"<b>주요 비판 포인트 우선순위</b><br><sub style='font-size:9px;color:#888;'>비판 강도(5점 만점)</sub>",
                    font=dict(size=12, color='#003366', family=FONT_KR), x=0.5, xanchor='center'),
     )
 
-    r_col, detail_col = st.columns([1, 1])
+    # 원 그래프 작게(1), 막대 그래프 크게(2)
+    r_col, detail_col = st.columns([1, 2])
     with r_col:
         st.plotly_chart(fig_radar, use_container_width=True, config=cfg())
 
     with detail_col:
-        visible = [(cat, val) for cat, val in cat_neg_sorted[:6] if val > 0]
+        visible = [(cat, val) for cat, val in cat_neg_sorted[:5] if val > 0]
         # 레이더 차트와 동일한 높이(360px) flexbox로 항목 균등 배분
         rows_html = ""
         for rank_i, (cat, val) in enumerate(visible, 1):
@@ -2788,19 +2786,20 @@ padding:7px 10px;border-radius:0 4px 4px 0;font-size:10px;color:#777;'>
             c = item["criticism"]
             dots_str = "●"*c["dots"]+"○"*(5-c["dots"])
             cat_val = c.get("category", c["title"])
-            # 해당 카테고리 부정 기사 헤드라인 최대 2건
             cat_arts = df[(df["카테고리"]==cat_val)&(df["감성"]=="부정")].sort_values("일자", ascending=False).head(2)
             hl_items = ""
             for _, row in cat_arts.iterrows():
                 hl = str(row["헤드라인"])[:30]
                 tooltip = f"{row['일자']} · {row['매체']}"
-                hl_items += f"<div title='{tooltip}' style='font-size:10px;color:#888;padding:2px 0;border-left:2px solid #FFCDD2;padding-left:6px;margin-top:3px;cursor:default;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;' title='{tooltip}'>📰 {hl}</div>"
+                hl_items += f"<div style='font-size:10px;color:#888;padding:2px 0;border-left:2px solid #FFCDD2;padding-left:6px;margin-top:3px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;' title='{tooltip}'>📰 {hl}</div>"
             if not hl_items:
                 pts_html = "  /  ".join(c["points"])
                 hl_items = f"<div style='font-size:10px;color:#aaa;'>{pts_html}</div>"
+            # 제목에서 꺽쇠(「」) 제거
+            title_clean = c["title"].replace("「","").replace("」","")
             st.markdown(f"""<div style='border:1px solid #FFCDD2;border-top:none;background:#FFF8F8;padding:10px 14px;margin-bottom:3px;font-family:{FONT_KR};height:90px;overflow:hidden;'>
   <div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;'>
-    <span style='font-size:12px;font-weight:700;color:#C62828;'>이슈 {i}. {c["title"]}</span>
+    <span style='font-size:12px;font-weight:700;color:#C62828;'>이슈 {i}. {title_clean}</span>
     <span style='font-size:10px;color:#C62828;letter-spacing:1px;'>{dots_str}</span>
   </div>
   {hl_items}
@@ -2809,9 +2808,8 @@ padding:7px 10px;border-radius:0 4px 4px 0;font-size:10px;color:#777;'>
         st.markdown(f"<div style='background:#1565C0;color:white;padding:7px 14px;border-radius:6px 6px 0 0;font-size:13px;font-weight:800;font-family:{FONT_KR};'>✅ 개선 방향 (To-Be)</div>", unsafe_allow_html=True)
         for i, item in enumerate(paired, 1):
             db = item["db"]
-            step1 = db["steps"][0] if db["steps"] else db["action"]
             st.markdown(f"""<div style='border:1px solid #BBDEFB;border-top:none;background:#F0F8FF;padding:10px 14px;margin-bottom:3px;font-family:{FONT_KR};height:90px;overflow:hidden;'>
-  <div style='font-size:12px;font-weight:700;color:#1565C0;margin-bottom:5px;'>전략 {i}. {db["action"]}</div>
+  <div style='font-size:12px;font-weight:700;color:#1565C0;margin-bottom:7px;'>전략 {i}. {db["action"]}</div>
   <div style='font-size:11px;background:white;border-left:3px solid #003366;padding:4px 8px;color:#003366;font-weight:700;'>📌 {db["msg"]}</div>
 </div>""", unsafe_allow_html=True)
 
