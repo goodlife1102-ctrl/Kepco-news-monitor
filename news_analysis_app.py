@@ -2366,6 +2366,28 @@ def render_report(cd):
     # ═══ 03. 요주의/우호 매체 ═══
     divider("04 · 요주의/우호 매체")
 
+    # 등급 범례
+    grade_legend_html = "".join([
+        f"<span style='background:{c};color:white;padding:2px 7px;border-radius:3px;"
+        f"font-size:10px;font-weight:700;margin-right:6px;'>{g}</span>"
+        f"<span style='font-size:10px;color:#555;margin-right:14px;'>{desc}</span>"
+        for g, c, desc in [
+            ("S","#B71C1C","열독률 상위 10%"),
+            ("A","#E64A19","상위 20%"),
+            ("B","#1565C0","상위 40%"),
+            ("C","#2E7D32","상위 60%"),
+            ("D","#616161","하위 40%"),
+        ]
+    ])
+    st.markdown(
+        f"<div style='background:#F8F9FA;border:1px solid #eee;border-radius:6px;"
+        f"padding:7px 14px;margin-bottom:10px;font-family:{FONT_KR};display:flex;"
+        f"align-items:center;flex-wrap:wrap;gap:4px;'>"
+        f"<span style='font-size:10px;font-weight:700;color:#888;margin-right:10px;'>등급 범례</span>"
+        f"{grade_legend_html}</div>",
+        unsafe_allow_html=True
+    )
+
     # ═══ 03. 요주의/우호 매체 (좌우 나란히) ═══
     media_all_r = df["매체"].value_counts()
     media_with_neg = []
@@ -2475,7 +2497,7 @@ def render_report(cd):
     # ═══ 06. 위기관리 키워드 추세 (부정 Top1, 최근 3개월 일자별) ═══
     # ═══ 05-B. 블랙리스트 기자 ═══
     st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
-    divider("06 · 부정 보도 집중 기자 — 블랙리스트")
+    divider("06 · 기자 블랙리스트  *기간 내 3건 이상 부정보도")
 
     df_rep = df[df["기자"] != "—"].copy()
     if df_rep.empty:
@@ -2492,7 +2514,8 @@ def render_report(cd):
         # 부정 건수 3건 이상만, 부정 비율 내림차순
         rep_stats = [r for r in rep_stats if r[2] >= 3]
         rep_stats.sort(key=lambda x: (-x[2], -x[4]))
-        black_list = rep_stats[:8]   # 블랙리스트 상위 8명
+        show_n_bl = st.session_state.get(f'bl_show_{label}', 3)
+        black_list = rep_stats[:show_n_bl]
 
         if not black_list:
             st.caption("기간 내 3건 이상의 부정 보도를 작성한 기자가 없습니다")
@@ -2506,7 +2529,7 @@ def render_report(cd):
                 )
                 st.markdown(
                     f"<div style='font-size:12px;font-weight:800;color:#C62828;margin-bottom:6px;'>"
-                    f"🚨 부정 보도 집중 기자 TOP {min(len(black_list),8)}</div>",
+                    f"🚨 부정 보도 집중 기자 TOP {len(black_list)}</div>",
                     unsafe_allow_html=True
                 )
 
@@ -2576,6 +2599,13 @@ def render_report(cd):
 </table>""",
                     unsafe_allow_html=True
                 )
+                # 더보기 버튼
+                total_bl = len(rep_stats)
+                cur_show = st.session_state.get(f'bl_show_{label}', 3)
+                if cur_show < total_bl:
+                    if st.button(f"▼ 더보기 ({total_bl - cur_show}명 더)", key=f"bl_more_{label}"):
+                        st.session_state[f'bl_show_{label}'] = cur_show + 3
+                        st.rerun()
                 st.markdown("</div>", unsafe_allow_html=True)
 
             with bl2:
