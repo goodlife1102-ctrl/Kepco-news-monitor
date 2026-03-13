@@ -2372,18 +2372,76 @@ def render_report(cd):
         return f"<span style='background:{c};color:white;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:700;'>{g}</span>" if g else "<span style='background:#ddd;color:#999;padding:1px 5px;border-radius:3px;font-size:9px;'>—</span>"
 
     mc1, mc2 = st.columns(2)
+
+    # CSS 툴팁 스타일 (한 번만 정의)
+    tooltip_css = f"""<style>
+.tip-wrap {{ position:relative; display:inline-block; cursor:pointer; }}
+.tip-wrap .tip-box {{
+  visibility:hidden; opacity:0;
+  background:#1a1a2e; color:#fff;
+  font-size:10px; line-height:1.6;
+  border-radius:6px; padding:8px 10px;
+  position:absolute; z-index:999;
+  bottom:125%; left:50%; transform:translateX(-50%);
+  width:260px; white-space:pre-line;
+  box-shadow:0 4px 14px rgba(0,0,0,.35);
+  transition:opacity .15s;
+  font-family:{FONT_KR};
+  pointer-events:none;
+}}
+.tip-wrap:hover .tip-box {{ visibility:visible; opacity:1; }}
+</style>"""
+
+    def make_tip(arts_tip, color):
+        """기사 목록을 툴팁 HTML로 변환"""
+        if not arts_tip:
+            return "<span style='color:{};font-size:11px;'>0</span>".format(color)
+        lines = "\n".join([f"· {r['일자']}  {r['헤드라인'][:22]}" for _, r in arts_tip.head(5).iterrows()])
+        cnt = len(arts_tip)
+        cnt_display = f"{cnt}건" if cnt <= 5 else f"{cnt}건 (상위 5건)"
+        tip_content = f"{cnt_display}\n──────────────\n{lines}"
+        return (f"<span class='tip-wrap' style='color:{color};font-size:11px;font-weight:600;'>"
+                f"{cnt}"
+                f"<span class='tip-box'>{tip_content}</span>"
+                f"</span>")
+
     with mc1:
-        neg_rows = "".join([f"<tr><td style='padding:5px 8px;font-size:11px;font-weight:600;'>{m}</td><td style='padding:5px 8px;text-align:center;'>{grade_badge(gi)}</td><td style='padding:5px 8px;text-align:center;font-size:11px;font-weight:700;color:#C62828;'>{neg_pct:.0f}%</td><td style='padding:5px 8px;text-align:center;font-size:11px;color:#C62828;'>{n_n}</td><td style='padding:5px 8px;text-align:center;font-size:11px;color:#888;'>{tot}</td></tr>" for m,gi,neg_pct,n_n,tot,_,_ in top_neg_media])
-        st.markdown(f"""<div style='background:#FFF5F5;border:1.5px solid #FFCDD2;border-radius:8px;padding:10px;font-family:{FONT_KR};'>
+        neg_rows = ""
+        for m, gi, neg_pct, n_n, tot, _, _ in top_neg_media:
+            arts_neg = df[(df["매체"]==m)&(df["감성"]=="부정")].sort_values("일자", ascending=False)
+            arts_tot = df[df["매체"]==m].sort_values("일자", ascending=False)
+            tip_neg = make_tip(arts_neg, "#C62828")
+            tip_tot = make_tip(arts_tot, "#888")
+            neg_rows += (f"<tr>"
+                f"<td style='padding:5px 8px;font-size:11px;font-weight:600;'>{m}</td>"
+                f"<td style='padding:5px 8px;text-align:center;'>{grade_badge(gi)}</td>"
+                f"<td style='padding:5px 8px;text-align:center;font-size:11px;font-weight:700;color:#C62828;'>{neg_pct:.0f}%</td>"
+                f"<td style='padding:5px 8px;text-align:center;'>{tip_neg}</td>"
+                f"<td style='padding:5px 8px;text-align:center;'>{tip_tot}</td>"
+                f"</tr>")
+        st.markdown(f"""{tooltip_css}<div style='background:#FFF5F5;border:1.5px solid #FFCDD2;border-radius:8px;padding:10px;font-family:{FONT_KR};'>
   <div style='font-size:12px;font-weight:800;color:#C62828;margin-bottom:6px;'>🚨 요주의 매체 (부정 보도 집중)</div>
   <table style='width:100%;border-collapse:collapse;'>
     <tr style='background:#FFEBEE;font-size:10px;color:#888;'><th style='padding:4px 8px;text-align:left;'>매체</th><th style='padding:4px 8px;'>등급</th><th style='padding:4px 8px;'>부정%</th><th style='padding:4px 8px;'>부정</th><th style='padding:4px 8px;'>전체</th></tr>
     {neg_rows}
   </table>
 </div>""", unsafe_allow_html=True)
+
     with mc2:
-        pos_rows = "".join([f"<tr><td style='padding:5px 8px;font-size:11px;font-weight:600;'>{m}</td><td style='padding:5px 8px;text-align:center;'>{grade_badge(gi)}</td><td style='padding:5px 8px;text-align:center;font-size:11px;font-weight:700;color:#1565C0;'>{pos_pct:.0f}%</td><td style='padding:5px 8px;text-align:center;font-size:11px;color:#1565C0;'>{n_p}</td><td style='padding:5px 8px;text-align:center;font-size:11px;color:#888;'>{tot}</td></tr>" for m,gi,_,_,tot,pos_pct,n_p in top_pos_media])
-        st.markdown(f"""<div style='background:#F0F8FF;border:1.5px solid #BBDEFB;border-radius:8px;padding:10px;font-family:{FONT_KR};'>
+        pos_rows = ""
+        for m, gi, _, _, tot, pos_pct, n_p in top_pos_media:
+            arts_pos = df[(df["매체"]==m)&(df["감성"]=="긍정")].sort_values("일자", ascending=False)
+            arts_tot = df[df["매체"]==m].sort_values("일자", ascending=False)
+            tip_pos = make_tip(arts_pos, "#1565C0")
+            tip_tot = make_tip(arts_tot, "#888")
+            pos_rows += (f"<tr>"
+                f"<td style='padding:5px 8px;font-size:11px;font-weight:600;'>{m}</td>"
+                f"<td style='padding:5px 8px;text-align:center;'>{grade_badge(gi)}</td>"
+                f"<td style='padding:5px 8px;text-align:center;font-size:11px;font-weight:700;color:#1565C0;'>{pos_pct:.0f}%</td>"
+                f"<td style='padding:5px 8px;text-align:center;'>{tip_pos}</td>"
+                f"<td style='padding:5px 8px;text-align:center;'>{tip_tot}</td>"
+                f"</tr>")
+        st.markdown(f"""{tooltip_css}<div style='background:#F0F8FF;border:1.5px solid #BBDEFB;border-radius:8px;padding:10px;font-family:{FONT_KR};'>
   <div style='font-size:12px;font-weight:800;color:#1565C0;margin-bottom:6px;'>✅ 우호 매체 (긍정 보도 집중)</div>
   <table style='width:100%;border-collapse:collapse;'>
     <tr style='background:#E3F2FD;font-size:10px;color:#888;'><th style='padding:4px 8px;text-align:left;'>매체</th><th style='padding:4px 8px;'>등급</th><th style='padding:4px 8px;'>긍정%</th><th style='padding:4px 8px;'>긍정</th><th style='padding:4px 8px;'>전체</th></tr>
