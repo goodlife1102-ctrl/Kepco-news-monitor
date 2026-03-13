@@ -778,7 +778,7 @@ def save_sub(cfg):
     except:
         return False
 
-def build_email_html(arts, df, label, period_str):
+def build_email_html(arts, df, label, period_str, days=1):
     """분석 결과 전체 레포트를 HTML 이메일로 변환"""
     total = len(df)
     if total == 0:
@@ -1257,7 +1257,7 @@ def send_email_report(cfg, test_addr=None, is_broadcast_test=False, custom_messa
                     fail_list.append(f"{sub['email']}(기사 없음)")
                     continue
                 try:
-                    html_body = build_email_html(arts, df, label, period_str)
+                    html_body = build_email_html(arts, df, label, period_str, days=days)
                     if custom_message and custom_message.strip():
                         msg_banner = (
                             f"<div style='background:#FFF8E1;border-left:4px solid #F9A825;"
@@ -1333,7 +1333,7 @@ def apply_scheduler(cfg):
                             label = sub.get("keyword","한국전력")
                             arts, df, period_str = _collect_news_for(label, c.get("days",1))
                             if arts is None: continue
-                            html_body = build_email_html(arts, df, label, period_str)
+                            html_body = build_email_html(arts, df, label, period_str, days=c.get("days",1))
                             addr = sub["email"]
                             subject = f"[KEPCO 뉴스] {label} 모니터링 리포트 — {(datetime.utcnow()+timedelta(hours=9)).strftime('%Y.%m.%d')}"
                             msg = MIMEMultipart("alternative")
@@ -3115,11 +3115,6 @@ with st.sidebar:
             adm     = load_sub()
             adm_subs = adm.get("subscribers", [])
             if adm_subs:
-                st.markdown(
-                    f"<div style='font-size:11px;font-weight:700;color:#003366;margin:8px 0 4px;"
-                    f"font-family:{FONT_KR};'>구독자 목록 ({len(adm_subs)}명)</div>",
-                    unsafe_allow_html=True
-                )
                 # ── 구독자 테이블 (재디자인) ──
                 if "del_checks" not in st.session_state:
                     st.session_state.del_checks = {}
@@ -3177,7 +3172,7 @@ with st.sidebar:
                             f"<span style='color:#666;'>{freq_lbl}</span></div>",
                             unsafe_allow_html=True)
                     with c6:
-                        if st.button("📤 발송", key=f"ind_send_{idx_s}", use_container_width=True):
+                        if st.button("📤", key=f"ind_send_{idx_s}", use_container_width=True):
                             adm_now  = load_sub()
                             test_msg = st.session_state.get("admin_test_msg", "")
                             with st.spinner(f"{s['email']} 발송 중..."):
