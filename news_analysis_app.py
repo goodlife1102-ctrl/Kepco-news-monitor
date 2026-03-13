@@ -2948,6 +2948,12 @@ with st.sidebar:
             run = st.form_submit_button("Go", use_container_width=True)
             st.markdown("</div>", unsafe_allow_html=True)
         st.caption("쉼표(,)=개별  |  플러스(+)=동시포함")
+        st.markdown(
+            f"<div style='font-size:10px;color:#E65100;background:#FFF3E0;border-left:3px solid #E65100;"
+            f"padding:5px 8px;border-radius:0 4px 4px 0;margin:-4px 0 6px;font-family:{FONT_KR};'>"
+            f"💡 키워드 1개씩 분석할 때 가장 정확합니다</div>",
+            unsafe_allow_html=True
+        )
         cs1,cs2 = st.columns(2)
         with cs1: start_date = st.date_input("시작일", datetime.now()-timedelta(days=7))
         with cs2: end_date = st.date_input("종료일", datetime.now())
