@@ -2915,14 +2915,37 @@ padding:7px 10px;border-radius:0 4px 4px 0;font-size:10px;color:#777;'>
     st.markdown("---")
 
 # ══ APP ═══════════════════════════════════════════════
-st.set_page_config(page_title="홍보실에 꼭 필요한 뉴스 분석시스템_by 글쓰는 여행자", layout="wide", page_icon="⚡", initial_sidebar_state="expanded")
+st.set_page_config(page_title="홍보실에 꼭 필요한 뉴스 분석시스템_by 글쓰는 여행자", layout="wide", page_icon="⚡", initial_sidebar_state="collapsed")
 st.markdown(f"""<style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;800&display=swap');
-.main .block-container{{padding-top:.5rem;padding-bottom:.5rem;max-width:1400px;}}
+*,*::before,*::after{{box-sizing:border-box;}}
+.main p,.main div,.main span,.main td,.main th,.main label,.main h1,.main h2,.main h3,button{{font-family:{FONT_KR} !important;}}
+.main .block-container{{padding-top:.5rem;padding-bottom:2rem;max-width:1400px;padding-left:1.5rem;padding-right:1.5rem;}}
 [data-testid="stSidebar"]{{background:#F4F6F9;}}
 .stTabs [data-baseweb="tab"]{{font-size:12px;padding:5px 14px;font-family:{FONT_KR};}}
 div[data-testid="stVerticalBlock"]>div{{gap:0.3rem;}}
-.main p, .main div, .main span, .main td, .main th, .main label {{font-family:{FONT_KR};}}
+@media(max-width:768px){{
+  .main .block-container{{padding-left:.5rem !important;padding-right:.5rem !important;padding-top:.3rem !important;}}
+  [data-testid="stSidebar"]{{width:85vw !important;min-width:unset !important;}}
+  .stButton>button{{min-height:44px !important;font-size:13px !important;padding:8px 12px !important;width:100% !important;border-radius:6px !important;}}
+  .stTextInput>div>div>input,.stSelectbox>div>div{{font-size:14px !important;min-height:44px !important;}}
+  .stTabs [data-baseweb="tab-list"]{{overflow-x:auto !important;flex-wrap:nowrap !important;-webkit-overflow-scrolling:touch;}}
+  .stTabs [data-baseweb="tab"]{{font-size:11px !important;padding:6px 10px !important;white-space:nowrap !important;}}
+  table{{width:100% !important;font-size:10px !important;}}
+  div[data-testid="column"]{{width:100% !important;flex:1 1 100% !important;min-width:100% !important;}}
+  div[data-testid="stHorizontalBlock"]>div[data-testid="column"]{{flex:1 1 45% !important;min-width:45% !important;}}
+  .stDownloadButton>button{{min-height:44px !important;font-size:12px !important;width:100% !important;}}
+  .stSelectbox label{{font-size:11px !important;}}
+  .stDateInput>div{{min-height:44px !important;}}
+  body{{overflow-x:hidden !important;}}
+  [data-testid="collapsedControl"]{{width:44px !important;height:44px !important;}}
+}}
+@media(max-width:480px){{
+  .main .block-container{{padding-left:.3rem !important;padding-right:.3rem !important;}}
+  table{{font-size:9px !important;}}
+  .stButton>button{{font-size:12px !important;}}
+  div[data-testid="stHorizontalBlock"]>div[data-testid="column"]{{flex:1 1 48% !important;min-width:48% !important;}}
+}}
 </style>""", unsafe_allow_html=True)
 
 for k,v in [("history",[]),("analysis_cache",{}),("active_key",None)]:
