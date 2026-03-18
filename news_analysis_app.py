@@ -1843,26 +1843,63 @@ def plot_wordcloud(df, center_word='한국전력'):
     xs   = [0]
     ys   = [0]
     texts= [center_word]
-    sizes= [52]
+    sizes= [48]
     cols = ['#003366']
     hover= [f'<b>{center_word}</b> | 검색어 | {center_cnt}건']
 
-    # 간격 확대: base_r, r_step, x_scale 모두 키움
-    angle_step = 2.399; r_step = 0.28; base_r = 0.70
+    def _overlaps(nx, ny, ns, placed, margin=1.15):
+        nw = ns * 0.55 * margin
+        nh = ns * 0.30 * margin
+        for px, py, ps in placed:
+            pw = ps * 0.55 * margin
+            ph = ps * 0.30 * margin
+            if abs(nx - px) < (nw + pw) and abs(ny - py) < (nh + ph):
+                return True
+        return False
+
+    placed = [(0, 0, 48 * 0.014)]
+    angle_step = 2.399
+
     for i, (word, info) in enumerate(items):
         if word == center_word:
             continue
         sent, cnt = info[0], info[1]
         headlines_raw = info[2] if len(info) > 2 else []
 
-        angle = i * angle_step
-        r = base_r + r_step * (i // 6)
-        x = r * np.cos(angle) * 2.5 + random.uniform(-0.08, 0.08)
-        y = r * np.sin(angle) * 1.2 + random.uniform(-0.05, 0.05)
-        size = max(12, min(30, int(12 + (cnt / max_cnt) * 19)))
-        color = '#C62828' if sent == '부정' else '#1565C0' if sent == '긍정' else '#777777'
-        xs.append(x); ys.append(y); texts.append(word)
+        ratio = cnt / max_cnt if max_cnt > 0 else 0
+        size = max(11, min(32, int(11 + ratio * 22)))
+        size_unit = size * 0.014
+
+        if sent == '부정':
+            alpha = 0.60 + ratio * 0.40
+            color = f'rgba(198,{int(30+ratio*15)},{int(30+ratio*15)},{alpha:.2f})'
+        elif sent == '긍정':
+            alpha = 0.60 + ratio * 0.40
+            color = f'rgba({int(18+ratio*12)},{int(90+ratio*40)},{int(185+ratio*35)},{alpha:.2f})'
+        else:
+            alpha = 0.45 + ratio * 0.40
+            color = f'rgba(80,80,80,{alpha:.2f})'
+
+        placed_x, placed_y = None, None
+        for attempt in range(80):
+            ring = attempt // 12
+            base_r = 0.65 + ring * 0.30
+            ang = (i + attempt * 0.65) * angle_step
+            x = base_r * np.cos(ang) * 2.6 + random.uniform(-0.04, 0.04)
+            y = base_r * np.sin(ang) * 1.3 + random.uniform(-0.03, 0.03)
+            if not _overlaps(x, y, size_unit, placed):
+                placed_x, placed_y = x, y
+                break
+        if placed_x is None:
+            ring = 4
+            base_r = 0.65 + ring * 0.30
+            ang = i * angle_step
+            placed_x = base_r * np.cos(ang) * 2.6
+            placed_y = base_r * np.sin(ang) * 1.3
+
+        xs.append(placed_x); ys.append(placed_y); texts.append(word)
         sizes.append(size); cols.append(color)
+        placed.append((placed_x, placed_y, size_unit))
 
         if headlines_raw:
             hl_lines = "<br>".join([
@@ -1914,10 +1951,10 @@ def plot_wordcloud(df, center_word='한국전력'):
     ))
     fig.add_annotation(x=0, y=0, text='', showarrow=False)
     fig.update_layout(
-        xaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[-4.2, 4.2]),
+        xaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[-4.0, 4.0]),
         yaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[-2.0, 2.0]),
         paper_bgcolor='white', plot_bgcolor='#FAFBFC',
-        margin=dict(l=5, r=5, t=5, b=5), height=380,
+        margin=dict(l=10, r=10, t=10, b=10), height=400,
         font=dict(family=FONT_KR),
         dragmode=False,
         hoverdistance=20,
@@ -2403,6 +2440,47 @@ def render_report(cd):
     )
     fig_wc = plot_wordcloud(df, center_word=label)
     st.plotly_chart(fig_wc, use_container_width=True, config=cfg_static())
+    # 툴팁 좌/우측 고정 JS
+    components.html("""<script>
+(function() {
+  function fixTooltip() {
+    var plots = window.parent.document.querySelectorAll('.js-plotly-plot');
+    plots.forEach(function(plot) {
+      if (plot._wc_fixed) return;
+      plot._wc_fixed = true;
+      plot.addEventListener('mousemove', function(e) {
+        requestAnimationFrame(function() {
+          var layer = plot.querySelector('.hoverlayer');
+          if (!layer) return;
+          var tip = layer.querySelector('g.hovertext');
+          if (!tip) return;
+          var plotRect = plot.getBoundingClientRect();
+          var cx = e.clientX - plotRect.left;
+          var pw = plotRect.width;
+          var t = tip.getAttribute('transform') || '';
+          var m = t.match(/translate\(([\d.\-]+),([\d.\-]+)\)/);
+          if (!m) return;
+          var tx = parseFloat(m[1]);
+          var ty = parseFloat(m[2]);
+          var tipW = tip.getBBox ? tip.getBBox().width : 260;
+          var newX;
+          if (cx < pw * 0.5) {
+            newX = tx + tipW * 0.5 + 16;
+          } else {
+            newX = tx - tipW * 0.5 - 16;
+          }
+          tip.setAttribute('transform', 'translate(' + newX + ',' + ty + ')');
+        });
+      });
+    });
+  }
+  fixTooltip();
+  setTimeout(fixTooltip, 800);
+  setTimeout(fixTooltip, 2000);
+  var obs = new MutationObserver(fixTooltip);
+  obs.observe(window.parent.document.body, {childList:true, subtree:true});
+})();
+</script>""", height=0)
 
     # ═══ 02. 언론노출 추이 및 논조 분석 + 키워드 TOP3 ═══
     divider("03 · 언론노출 추이 및 논조 분석")
