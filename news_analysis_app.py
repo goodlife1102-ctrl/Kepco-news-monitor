@@ -1887,12 +1887,30 @@ def plot_wordcloud(df, center_word='한국전력'):
         )
 
     fig = go.Figure()
+    # 텍스트 표시용 트레이스 (hover 없음)
     fig.add_trace(go.Scatter(
         x=xs, y=ys, mode='text',
         text=texts,
         textfont=dict(size=sizes, color=cols, family=FONT_KR),
         hoverinfo='skip',
+        showlegend=False,
+    ))
+    # 클릭 영역용 투명 마커 트레이스 (실제 클릭 이벤트 캡처)
+    marker_sizes = [max(s * 2.2, 28) for s in sizes]
+    fig.add_trace(go.Scatter(
+        x=xs, y=ys, mode='markers',
+        marker=dict(size=marker_sizes, color='rgba(0,0,0,0)', opacity=0),
+        hovertemplate='%{customdata}<extra></extra>',
+        hoverlabel=dict(
+            bgcolor='rgba(20,20,40,0.92)',
+            bordercolor='rgba(255,255,255,0.15)',
+            font=dict(size=11, color='white', family=FONT_KR),
+            namelength=0,
+            align='left',
+        ),
         customdata=hover,
+        showlegend=False,
+        name='',
     ))
     fig.add_annotation(x=0, y=0, text='', showarrow=False)
     fig.update_layout(
@@ -2377,29 +2395,46 @@ def render_report(cd):
             wc_event = st.plotly_chart(
                 fig_wc,
                 use_container_width=True,
-                config=cfg_static(),
+                config={**cfg_static(), 'displayModeBar': False},
                 on_select="rerun",
                 key=wc_key,
             )
             sel = wc_event.get("selection", {}) if isinstance(wc_event, dict) else {}
             pts = sel.get("points", [])
         except TypeError:
-            # Streamlit 구버전: on_select 미지원 → hover 방식 fallback
-            wc_fig_fallback = plot_wordcloud(df, center_word=label)
-            wc_fig_fallback.update_traces(hoverinfo='text',
-                hovertext=fig_wc.data[0].customdata if fig_wc.data else None)
-            st.plotly_chart(wc_fig_fallback, use_container_width=True, config=cfg_static())
+            st.plotly_chart(fig_wc, use_container_width=True, config=cfg_static())
             pts = []
-        if pts:
-            clicked_word = pts[0].get("text", "")
-            custom = pts[0].get("customdata", "")
-            if clicked_word and custom:
-                st.markdown(
-                    f"<div style='background:rgba(20,20,40,0.92);color:white;border-radius:8px;"
-                    f"padding:12px 16px;font-size:12px;line-height:1.8;font-family:{FONT_KR};"
-                    f"margin-top:6px;'>{custom}</div>",
-                    unsafe_allow_html=True
-                )
+        # 마커 트레이스(index=1)에서 customdata 추출
+        matched_custom = ""
+        matched_text = ""
+        for pt in pts:
+            cd = pt.get("customdata", "")
+            tx = pt.get("text", "")
+            # 마커 트레이스는 text가 없고 customdata만 있음
+            if cd:
+                matched_custom = cd
+                break
+            if tx and not matched_custom:
+                matched_text = tx
+        # 텍스트 트레이스 클릭 시 같은 좌표의 customdata 찾기
+        if not matched_custom and pts:
+            pt = pts[0]
+            xi, yi = pt.get("x"), pt.get("y")
+            if xi is not None and fig_wc.data and len(fig_wc.data) > 1:
+                xs2 = list(fig_wc.data[1].x)
+                ys2 = list(fig_wc.data[1].y)
+                cds = list(fig_wc.data[1].customdata) if fig_wc.data[1].customdata is not None else []
+                for k, (xv, yv) in enumerate(zip(xs2, ys2)):
+                    if abs(float(xv)-float(xi))<0.01 and abs(float(yv)-float(yi))<0.01 and k < len(cds):
+                        matched_custom = cds[k]
+                        break
+        if matched_custom:
+            st.markdown(
+                f"<div style='background:rgba(20,20,40,0.92);color:white;border-radius:8px;"
+                f"padding:14px 18px;font-size:12px;line-height:2.0;font-family:{FONT_KR};"
+                f"margin-top:8px;'>{matched_custom}</div>",
+                unsafe_allow_html=True
+            )
     with wc2:
         st.markdown(f"""<div style='background:#F8F9FA;border-radius:6px;padding:10px;font-family:{FONT_KR};font-size:11px;'>
         <div style='font-weight:700;color:#003366;margin-bottom:6px;'>범례</div>
