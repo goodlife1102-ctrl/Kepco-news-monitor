@@ -2954,33 +2954,6 @@ div[data-testid="stVerticalBlock"]>div{{gap:0.3rem;}}
   .stButton>button{{font-size:12px !important;}}
   div[data-testid="stHorizontalBlock"]>div[data-testid="column"]{{flex:1 1 48% !important;min-width:48% !important;}}
 }}
-/* ── 사이드바 토글 버튼 레이블 ── */
-[data-testid="collapsedControl"] {{
-  display:flex !important;
-  align-items:center !important;
-  gap:4px !important;
-}}
-[data-testid="collapsedControl"]::after {{
-  content:"키워드 입력 바로가기";
-  font-size:10px;
-  color:#003366;
-  font-weight:700;
-  white-space:nowrap;
-  font-family:'Noto Sans KR',sans-serif;
-}}
-[data-testid="expandedControl"] {{
-  display:flex !important;
-  align-items:center !important;
-  gap:4px !important;
-}}
-[data-testid="expandedControl"]::after {{
-  content:"분석화면 바로가기";
-  font-size:10px;
-  color:#003366;
-  font-weight:700;
-  white-space:nowrap;
-  font-family:'Noto Sans KR',sans-serif;
-}}
 </style>""", unsafe_allow_html=True)
 
 for k,v in [("history",[]),("analysis_cache",{}),("active_key",None)]:
@@ -3001,6 +2974,41 @@ md = get_market_data(custom_ticker=_custom_ticker)
 md["custom_name"] = _custom_name  # 표시명 덮어쓰기
 st.markdown(f"""<div style='background:#003366;color:white;padding:8px 16px;border-radius:5px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-family:{FONT_KR};'><span style='font-size:15px;font-weight:700;'>⚡ 홍보실에 꼭 필요한 뉴스 분석시스템</span><span style='font-size:8px;opacity:.65;'>{(datetime.utcnow()+timedelta(hours=9)).strftime('%Y.%m.%d')} | 열독률 등급 기반 | 네이버 뉴스 API</span></div>""", unsafe_allow_html=True)
 st.markdown(mhdr(md), unsafe_allow_html=True)
+
+# 사이드바 토글 버튼 레이블 JS 주입
+components.html("""
+<script>
+(function labelSidebarToggle() {
+  function applyLabel() {
+    // collapsed 상태 버튼 (>> 아이콘)
+    var collapsed = window.parent.document.querySelector('[data-testid="collapsedControl"]');
+    if (collapsed && !collapsed.querySelector('.sidebar-label')) {
+      var span = window.parent.document.createElement('span');
+      span.className = 'sidebar-label';
+      span.style.cssText = 'font-size:10px;color:#003366;font-weight:700;white-space:nowrap;font-family:Noto Sans KR,sans-serif;margin-left:4px;';
+      span.textContent = '키워드 입력 바로가기';
+      collapsed.appendChild(span);
+    }
+    // expanded 상태 버튼 (<< 아이콘)
+    var expanded = window.parent.document.querySelector('[data-testid="expandedControl"]');
+    if (expanded && !expanded.querySelector('.sidebar-label')) {
+      var span2 = window.parent.document.createElement('span');
+      span2.className = 'sidebar-label';
+      span2.style.cssText = 'font-size:10px;color:#003366;font-weight:700;white-space:nowrap;font-family:Noto Sans KR,sans-serif;margin-left:4px;';
+      span2.textContent = '분석화면 바로가기';
+      expanded.appendChild(span2);
+    }
+  }
+  // 즉시 실행 + 0.5초, 1.5초 후 재시도 (Streamlit 렌더링 대기)
+  applyLabel();
+  setTimeout(applyLabel, 500);
+  setTimeout(applyLabel, 1500);
+  // MutationObserver로 DOM 변경 시 재적용
+  var observer = new MutationObserver(applyLabel);
+  observer.observe(window.parent.document.body, {childList: true, subtree: true});
+})();
+</script>
+""", height=0)
 
 with st.sidebar:
     st.markdown(f"<h3 style='font-family:{FONT_KR};'>분석 설정</h3>", unsafe_allow_html=True)
