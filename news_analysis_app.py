@@ -1858,7 +1858,19 @@ def plot_wordcloud(df, center_word='한국전력'):
         return False
 
     placed = [(0, 0, 48 * 0.014)]
-    angle_step = 2.399
+
+    # 후보 위치 풀: 중심에서 랜덤하게 퍼진 비정형 좌표 미리 생성
+    random.seed(42 + len(items))
+    candidate_pool = []
+    for _ in range(1200):
+        # 균일 분포로 전체 영역에 흩뿌리기 (중심 근처 제외)
+        rx = random.uniform(-3.8, 3.8)
+        ry = random.uniform(-1.8, 1.8)
+        # 중심(검색어) 주변 0.8 이내는 제외
+        if abs(rx) < 0.8 and abs(ry) < 0.5:
+            continue
+        candidate_pool.append((rx, ry))
+    random.shuffle(candidate_pool)
 
     for i, (word, info) in enumerate(items):
         if word == center_word:
@@ -1880,22 +1892,26 @@ def plot_wordcloud(df, center_word='한국전력'):
             alpha = 0.45 + ratio * 0.40
             color = f'rgba(80,80,80,{alpha:.2f})'
 
+        # 후보 풀에서 겹치지 않는 위치 탐색
         placed_x, placed_y = None, None
-        for attempt in range(80):
-            ring = attempt // 12
-            base_r = 0.65 + ring * 0.30
-            ang = (i + attempt * 0.65) * angle_step
-            x = base_r * np.cos(ang) * 2.6 + random.uniform(-0.04, 0.04)
-            y = base_r * np.sin(ang) * 1.3 + random.uniform(-0.03, 0.03)
-            if not _overlaps(x, y, size_unit, placed):
-                placed_x, placed_y = x, y
+        for cx, cy in candidate_pool:
+            if not _overlaps(cx, cy, size_unit, placed):
+                placed_x, placed_y = cx, cy
+                candidate_pool.remove((cx, cy))
                 break
+
+        # 후보 풀 소진 시 마지막 수단: 범위를 점점 넓히며 랜덤 시도
         if placed_x is None:
-            ring = 4
-            base_r = 0.65 + ring * 0.30
-            ang = i * angle_step
-            placed_x = base_r * np.cos(ang) * 2.6
-            placed_y = base_r * np.sin(ang) * 1.3
+            for attempt in range(60):
+                scale = 1.0 + attempt * 0.08
+                rx = random.uniform(-3.8 * scale, 3.8 * scale)
+                ry = random.uniform(-1.8 * scale, 1.8 * scale)
+                if not _overlaps(rx, ry, size_unit, placed):
+                    placed_x, placed_y = rx, ry
+                    break
+            if placed_x is None:
+                placed_x = random.uniform(-3.5, 3.5)
+                placed_y = random.uniform(-1.7, 1.7)
 
         xs.append(placed_x); ys.append(placed_y); texts.append(word)
         sizes.append(size); cols.append(color)
