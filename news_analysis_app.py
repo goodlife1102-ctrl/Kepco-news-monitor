@@ -1243,6 +1243,10 @@ def _collect_news_for(label, days):
     if not arts:
         return None, None, None
     arts = auto_cat(arts, label=label)
+    df = pd.DataFrame(arts)
+    end_dt   = datetime.now().date()
+    start_dt = end_dt - timedelta(days=max(1, int(days)))
+    period_str = f"{start_dt.strftime('%Y.%m.%d')} ~ {end_dt.strftime('%m.%d')}"
     return arts, df, period_str
 
 
@@ -1738,6 +1742,7 @@ def mhdr(d):
 
 # ── 차트 함수 ──────────────────────────────────────────
 def cfg(): return {'displayModeBar':False}
+def cfg_static(): return {'displayModeBar':False,'scrollZoom':False,'doubleClick':False}
 
 def extract_article_keywords(df, center_word='', top_n=28):
     """실제 기사 헤드라인에서 핵심 명사 추출 (Okt 형태소 분석)"""
@@ -1872,6 +1877,7 @@ def plot_wordcloud(df, center_word='한국전력'):
         paper_bgcolor='white', plot_bgcolor='#FAFBFC',
         margin=dict(l=5, r=5, t=5, b=5), height=280,
         font=dict(family=FONT_KR),
+        dragmode=False,
     )
     return fig
 
@@ -2002,7 +2008,8 @@ def plot_heatmap_with_hover(df):
         plot_bgcolor='white', paper_bgcolor='white',
         font=dict(family=FONT_KR, size=10),
         margin=dict(l=90, r=10, t=10, b=70), height=310,
-        annotations=annotations
+        annotations=annotations,
+        dragmode=False,
     )
     return fig
 
@@ -2340,7 +2347,7 @@ def render_report(cd):
     wc1, wc2 = st.columns([3,1])
     with wc1:
         fig_wc = plot_wordcloud(df, center_word=label)
-        st.plotly_chart(fig_wc, use_container_width=True, config=cfg())
+        st.plotly_chart(fig_wc, use_container_width=True, config=cfg_static())
     with wc2:
         st.markdown(f"""<div style='background:#F8F9FA;border-radius:6px;padding:10px;font-family:{FONT_KR};font-size:11px;'>
         <div style='font-weight:700;color:#003366;margin-bottom:6px;'>범례</div>
@@ -2505,7 +2512,7 @@ def render_report(cd):
     divider("05 · 매체×이슈 부정 보도 매트릭스 — 커서를 셀에 올리면 기사 확인")
     fig_hm = plot_heatmap_with_hover(df)
     if fig_hm:
-        st.plotly_chart(fig_hm, use_container_width=True, config=cfg())
+        st.plotly_chart(fig_hm, use_container_width=True, config=cfg_static())
     else:
         st.caption("데이터 부족으로 히트맵 생성 불가")
 
@@ -2687,8 +2694,9 @@ padding:7px 10px;border-radius:0 4px 4px 0;font-size:10px;color:#777;'>
                 xaxis=dict(tickformat="%m/%d", showgrid=False, tickangle=-30,
                            dtick=7*86400000, tickmode="linear"),
                 yaxis=dict(showgrid=True, gridcolor="#f5f5f5", rangemode="tozero"),
+                dragmode=False,
             )
-            st.plotly_chart(fig_crisis, use_container_width=True, config=cfg())
+            st.plotly_chart(fig_crisis, use_container_width=True, config=cfg_static())
         else:
             st.caption("최근 3개월 해당 키워드 데이터 없음")
 
@@ -2915,7 +2923,7 @@ padding:7px 10px;border-radius:0 4px 4px 0;font-size:10px;color:#777;'>
     st.markdown("---")
 
 # ══ APP ═══════════════════════════════════════════════
-st.set_page_config(page_title="홍보실에 꼭 필요한 뉴스 분석시스템_by 글쓰는 여행자", layout="wide", page_icon="⚡", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="홍보실에 꼭 필요한 뉴스 분석시스템", layout="wide", page_icon="⚡", initial_sidebar_state="expanded")
 st.markdown(f"""<style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;800&display=swap');
 *,*::before,*::after{{box-sizing:border-box;}}
@@ -2964,7 +2972,7 @@ _custom_ticker = st.session_state.get("header_ticker", "")
 _custom_name   = st.session_state.get("header_company", "")
 md = get_market_data(custom_ticker=_custom_ticker)
 md["custom_name"] = _custom_name  # 표시명 덮어쓰기
-st.markdown(f"""<div style='background:#003366;color:white;padding:8px 16px;border-radius:5px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-family:{FONT_KR};'><span style='font-size:15px;font-weight:700;'>⚡ 홍보실에 꼭 필요한 뉴스 분석시스템</span><span style='font-size:10px;opacity:.7;margin-left:6px;'>by 글쓰는 여행자</span><span style='font-size:8px;opacity:.65;'>{(datetime.utcnow()+timedelta(hours=9)).strftime('%Y.%m.%d')} | 열독률 등급 기반 | 네이버 뉴스 API</span></div>""", unsafe_allow_html=True)
+st.markdown(f"""<div style='background:#003366;color:white;padding:8px 16px;border-radius:5px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-family:{FONT_KR};'><span style='font-size:15px;font-weight:700;'>⚡ 홍보실에 꼭 필요한 뉴스 분석시스템</span><span style='font-size:8px;opacity:.65;'>{(datetime.utcnow()+timedelta(hours=9)).strftime('%Y.%m.%d')} | 열독률 등급 기반 | 네이버 뉴스 API</span></div>""", unsafe_allow_html=True)
 st.markdown(mhdr(md), unsafe_allow_html=True)
 
 with st.sidebar:
@@ -2980,12 +2988,7 @@ with st.sidebar:
         st.session_state["auto_run_done"] = True
 
     with st.form("mf", clear_on_submit=False):
-        kc1s,kc2s = st.columns([5,1])
-        with kc1s: keywords_input = st.text_input("🔍 키워드 (Enter=분석)", "", placeholder="키워드 입력 후 Enter")
-        with kc2s:
-            st.markdown("<div style='padding-top:24px;'>", unsafe_allow_html=True)
-            run = st.form_submit_button("Go", use_container_width=True)
-            st.markdown("</div>", unsafe_allow_html=True)
+        keywords_input = st.text_input("🔍 키워드 (Enter=분석)", "", placeholder="키워드 입력 후 Enter")
         st.caption("쉼표(,)=개별  |  플러스(+)=동시포함")
         st.markdown(
             f"<div style='font-size:10px;color:#E65100;background:#FFF3E0;border-left:3px solid #E65100;"
@@ -2997,6 +3000,7 @@ with st.sidebar:
         with cs1: start_date = st.date_input("시작일", datetime.now()-timedelta(days=7))
         with cs2: end_date = st.date_input("종료일", datetime.now())
         max_articles = st.select_slider("수집 기사 수", [500,1000,2000,3000,5000], value=1000)
+        run = st.form_submit_button("🔍 Go — 분석 시작", use_container_width=True)
 
     st.markdown("---")
     if st.session_state.history:
