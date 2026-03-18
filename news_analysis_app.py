@@ -2954,6 +2954,33 @@ div[data-testid="stVerticalBlock"]>div{{gap:0.3rem;}}
   .stButton>button{{font-size:12px !important;}}
   div[data-testid="stHorizontalBlock"]>div[data-testid="column"]{{flex:1 1 48% !important;min-width:48% !important;}}
 }}
+/* ── 사이드바 토글 버튼 레이블 ── */
+[data-testid="collapsedControl"] {{
+  display:flex !important;
+  align-items:center !important;
+  gap:4px !important;
+}}
+[data-testid="collapsedControl"]::after {{
+  content:"키워드 입력 바로가기";
+  font-size:10px;
+  color:#003366;
+  font-weight:700;
+  white-space:nowrap;
+  font-family:'Noto Sans KR',sans-serif;
+}}
+[data-testid="expandedControl"] {{
+  display:flex !important;
+  align-items:center !important;
+  gap:4px !important;
+}}
+[data-testid="expandedControl"]::after {{
+  content:"분석화면 바로가기";
+  font-size:10px;
+  color:#003366;
+  font-weight:700;
+  white-space:nowrap;
+  font-family:'Noto Sans KR',sans-serif;
+}}
 </style>""", unsafe_allow_html=True)
 
 for k,v in [("history",[]),("analysis_cache",{}),("active_key",None)]:
@@ -3468,4 +3495,4 @@ else:
                 if st.button("열람", key=f"v_{i}", use_container_width=True):
                     st.session_state.active_key=h['cache_key']; st.rerun()
     else:
-        st.markdown(f"""<div style='text-align:center;padding:50px;color:#aaa;font-family:{FONT_KR};'><div style='font-size:32px;'>⚡</div><div style='font-size:15px;font-weight:600;color:#003366;margin-top:8px;'>홍보실에 꼭 필요한 뉴스 분석시스템 <span style="font-size:9px;opacity:.7;">by 글쓰는 여행자</span></div><div style='font-size:12px;margin-top:6px;'>좌측 키워드 입력 후 🚀 클릭</div></div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div style='text-align:center;padding:50px;color:#aaa;font-family:{FONT_KR};'><div style='font-size:32px;'>⚡</div><div style='font-size:15px;font-weight:600;color:#003366;margin-top:8px;white-space:nowrap;'>홍보실에 꼭 필요한 뉴스 분석시스템</div><div style='font-size:11px;font-weight:500;color:#888;margin-top:3px;white-space:nowrap;'>by 글쓰는 여행자</div><div style='font-size:12px;margin-top:8px;'>좌측 키워드 입력 후 🚀 클릭</div></div>""", unsafe_allow_html=True)
