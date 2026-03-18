@@ -1891,14 +1891,7 @@ def plot_wordcloud(df, center_word='한국전력'):
         x=xs, y=ys, mode='text',
         text=texts,
         textfont=dict(size=sizes, color=cols, family=FONT_KR),
-        hovertext=hover, hoverinfo='text',
-        hoverlabel=dict(
-            bgcolor='rgba(20,20,40,0.92)',
-            bordercolor='rgba(255,255,255,0.15)',
-            font=dict(size=11, color='white', family=FONT_KR),
-            namelength=0,
-            align='left',
-        ),
+        hoverinfo='skip',
         customdata=hover,
     ))
     fig.add_annotation(x=0, y=0, text='', showarrow=False)
@@ -2379,14 +2372,41 @@ def render_report(cd):
     wc1, wc2 = st.columns([3,1])
     with wc1:
         fig_wc = plot_wordcloud(df, center_word=label)
-        st.plotly_chart(fig_wc, use_container_width=True, config=cfg_static())
+        wc_key = f"wc_{label}"
+        try:
+            wc_event = st.plotly_chart(
+                fig_wc,
+                use_container_width=True,
+                config=cfg_static(),
+                on_select="rerun",
+                key=wc_key,
+            )
+            sel = wc_event.get("selection", {}) if isinstance(wc_event, dict) else {}
+            pts = sel.get("points", [])
+        except TypeError:
+            # Streamlit 구버전: on_select 미지원 → hover 방식 fallback
+            wc_fig_fallback = plot_wordcloud(df, center_word=label)
+            wc_fig_fallback.update_traces(hoverinfo='text',
+                hovertext=fig_wc.data[0].customdata if fig_wc.data else None)
+            st.plotly_chart(wc_fig_fallback, use_container_width=True, config=cfg_static())
+            pts = []
+        if pts:
+            clicked_word = pts[0].get("text", "")
+            custom = pts[0].get("customdata", "")
+            if clicked_word and custom:
+                st.markdown(
+                    f"<div style='background:rgba(20,20,40,0.92);color:white;border-radius:8px;"
+                    f"padding:12px 16px;font-size:12px;line-height:1.8;font-family:{FONT_KR};"
+                    f"margin-top:6px;'>{custom}</div>",
+                    unsafe_allow_html=True
+                )
     with wc2:
         st.markdown(f"""<div style='background:#F8F9FA;border-radius:6px;padding:10px;font-family:{FONT_KR};font-size:11px;'>
         <div style='font-weight:700;color:#003366;margin-bottom:6px;'>범례</div>
         <div style='margin-bottom:4px;'><span style='color:#C62828;font-weight:700;'>■</span> 부정 키워드</div>
         <div style='margin-bottom:4px;'><span style='color:#1565C0;font-weight:700;'>■</span> 긍정 키워드</div>
         <div style='margin-bottom:8px;'><span style='color:#888;font-weight:700;'>■</span> 중립 키워드</div>
-        <div style='font-size:10px;color:#aaa;'>글자 크기 = 언급 빈도<br>커서를 단어에 올리면<br>상세 정보 표시</div>
+        <div style='font-size:10px;color:#aaa;'>글자 크기 = 언급 빈도<br>단어 클릭 시<br>상세 기사 확인 가능</div>
         </div>""", unsafe_allow_html=True)
 
     # ═══ 02. 언론노출 추이 및 논조 분석 + 키워드 TOP3 ═══
