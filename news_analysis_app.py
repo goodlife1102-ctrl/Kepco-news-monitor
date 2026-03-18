@@ -1847,7 +1847,8 @@ def plot_wordcloud(df, center_word='한국전력'):
     cols = ['#003366']
     hover= [f'<b>{center_word}</b> | 검색어 | {center_cnt}건']
 
-    angle_step = 2.399; r_step = 0.15; base_r = 0.45
+    # 간격 확대: base_r, r_step, x_scale 모두 키움
+    angle_step = 2.399; r_step = 0.28; base_r = 0.70
     for i, (word, info) in enumerate(items):
         if word == center_word:
             continue
@@ -1856,22 +1857,34 @@ def plot_wordcloud(df, center_word='한국전력'):
 
         angle = i * angle_step
         r = base_r + r_step * (i // 6)
-        x = r * np.cos(angle) * 2.2 + random.uniform(-0.1, 0.1)
-        y = r * np.sin(angle) + random.uniform(-0.07, 0.07)
-        size = max(13, min(34, int(13 + (cnt / max_cnt) * 22)))
+        x = r * np.cos(angle) * 2.5 + random.uniform(-0.08, 0.08)
+        y = r * np.sin(angle) * 1.2 + random.uniform(-0.05, 0.05)
+        size = max(12, min(30, int(12 + (cnt / max_cnt) * 19)))
         color = '#C62828' if sent == '부정' else '#1565C0' if sent == '긍정' else '#777777'
         xs.append(x); ys.append(y); texts.append(word)
         sizes.append(size); cols.append(color)
 
         if headlines_raw:
-            hl_lines = "<br>".join([f"· {h[2][:26]}  <span style='color:#aaa;font-size:9px;'>({h[0]} {h[1]})</span>" for h in headlines_raw[:3]])
+            hl_lines = "<br>".join([
+                f"· {h[2][:30]}"
+                f"<span style='color:#bbb;font-size:9px;'> {h[0]} {h[1]}</span>"
+                for h in headlines_raw[:3]
+            ])
         else:
             mask = df['헤드라인'].str.contains(word, na=False, regex=False)
             sample = df[mask][['일자','매체','헤드라인']].head(3)
-            hl_lines = "<br>".join([f"· {r2['헤드라인'][:26]}  <span style='color:#aaa;font-size:9px;'>({r2['일자']} {r2['매체']})</span>" for _,r2 in sample.iterrows()]) if not sample.empty else "헤드라인 없음"
+            hl_lines = "<br>".join([
+                f"· {r2['헤드라인'][:30]}"
+                f"<span style='color:#bbb;font-size:9px;'> {r2['일자']} {r2['매체']}</span>"
+                for _, r2 in sample.iterrows()
+            ]) if not sample.empty else "헤드라인 없음"
 
-        hover.append(f'<b>{word}</b> | {sent} | {cnt}회<br>──────────<br>{hl_lines}')
-
+        sent_kr = {'부정':'🔴 부정','긍정':'🔵 긍정','중립':'🟡 중립'}.get(sent, sent)
+        hover.append(
+            f"<b style='font-size:13px;'>{word}</b>  {sent_kr}  {cnt}회"
+            f"<br><span style='color:#ccc;'>─────────────────</span><br>"
+            f"{hl_lines}"
+        )
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(
@@ -1879,16 +1892,24 @@ def plot_wordcloud(df, center_word='한국전력'):
         text=texts,
         textfont=dict(size=sizes, color=cols, family=FONT_KR),
         hovertext=hover, hoverinfo='text',
+        hoverlabel=dict(
+            bgcolor='rgba(20,20,40,0.92)',
+            bordercolor='rgba(255,255,255,0.15)',
+            font=dict(size=11, color='white', family=FONT_KR),
+            namelength=0,
+            align='left',
+        ),
         customdata=hover,
     ))
     fig.add_annotation(x=0, y=0, text='', showarrow=False)
     fig.update_layout(
-        xaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[-3.5, 3.5]),
-        yaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[-1.6, 1.6]),
+        xaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[-4.5, 4.5]),
+        yaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[-2.2, 2.2]),
         paper_bgcolor='white', plot_bgcolor='#FAFBFC',
-        margin=dict(l=5, r=5, t=5, b=5), height=280,
+        margin=dict(l=10, r=10, t=10, b=10), height=320,
         font=dict(family=FONT_KR),
         dragmode=False,
+        hoverdistance=30,
     )
     return fig
 
