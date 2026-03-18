@@ -2921,7 +2921,28 @@ padding:7px 10px;border-radius:0 4px 4px 0;font-size:10px;color:#777;'>
     dl1,dl2,dl3 = st.columns(3)
     with dl1:
         out=io.BytesIO()
-        with pd.ExcelWriter(out,engine='openpyxl') as w: df.to_excel(w,index=False,sheet_name="데이터")
+        # 시간 컬럼 제거 + 헤드라인에 하이퍼링크 적용
+        df_xl = df.drop(columns=[c for c in ['시간','월'] if c in df.columns], errors='ignore')
+        # 컬럼 순서: 키워드그룹, 일자, 매체, 등급, 열독률, 헤드라인, 요약, 감성, 카테고리, 기자 (링크 제거)
+        col_order = [c for c in ['키워드그룹','일자','매체','등급','열독률','헤드라인','요약','감성','카테고리','기자'] if c in df_xl.columns]
+        df_xl = df_xl[col_order]
+        with pd.ExcelWriter(out, engine='openpyxl') as w:
+            df_xl.to_excel(w, index=False, sheet_name="데이터")
+            ws = w.sheets["데이터"]
+            # 헤드라인 컬럼 인덱스 찾기 (1-based)
+            hl_col_idx = col_order.index('헤드라인') + 1 if '헤드라인' in col_order else None
+            if hl_col_idx:
+                from openpyxl.styles import Font
+                for row_idx, (_, row) in enumerate(df.iterrows(), start=2):
+                    url = str(row.get('링크', ''))
+                    cell = ws.cell(row=row_idx, column=hl_col_idx)
+                    if url and url.startswith('http'):
+                        cell.hyperlink = url
+                        cell.font = Font(color='0000FF', underline='single')
+            # 컬럼 너비 자동 조정
+            col_widths = {'키워드그룹':12,'일자':12,'매체':12,'등급':6,'열독률':8,'헤드라인':50,'요약':20,'감성':6,'카테고리':14,'기자':8}
+            for i, col_name in enumerate(col_order, start=1):
+                ws.column_dimensions[ws.cell(row=1, column=i).column_letter].width = col_widths.get(col_name, 12)
         out.seek(0)
         st.download_button("📥 엑셀", data=out, file_name=f"한전뉴스_{label}_{(datetime.utcnow()+timedelta(hours=9)).strftime('%Y%m%d')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, key=f"xl_{label}")
     with dl2:
