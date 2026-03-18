@@ -1887,7 +1887,7 @@ def plot_wordcloud(df, center_word='한국전력'):
         )
 
     fig = go.Figure()
-    # 텍스트 표시용 트레이스 (hover 없음)
+    # 텍스트 표시용 트레이스
     fig.add_trace(go.Scatter(
         x=xs, y=ys, mode='text',
         text=texts,
@@ -1895,25 +1895,32 @@ def plot_wordcloud(df, center_word='한국전력'):
         hoverinfo='skip',
         showlegend=False,
     ))
-    # 클릭 영역용 투명 마커 트레이스 (hover 완전 비활성화, 클릭만 감지)
-    marker_sizes = [max(s * 2.2, 28) for s in sizes]
+    # hover 감지용 투명 마커 트레이스
+    marker_sizes = [max(s * 2.5, 32) for s in sizes]
     fig.add_trace(go.Scatter(
         x=xs, y=ys, mode='markers',
         marker=dict(size=marker_sizes, color='rgba(0,0,0,0)', opacity=0),
-        hoverinfo='skip',
+        hovertemplate='%{customdata}<extra></extra>',
+        hoverlabel=dict(
+            bgcolor='rgba(20,20,40,0.93)',
+            bordercolor='rgba(255,255,255,0.2)',
+            font=dict(size=11, color='white', family=FONT_KR),
+            namelength=0,
+            align='left',
+        ),
         customdata=hover,
         showlegend=False,
         name='',
     ))
     fig.add_annotation(x=0, y=0, text='', showarrow=False)
     fig.update_layout(
-        xaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[-4.5, 4.5]),
-        yaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[-2.2, 2.2]),
+        xaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[-4.2, 4.2]),
+        yaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[-2.0, 2.0]),
         paper_bgcolor='white', plot_bgcolor='#FAFBFC',
-        margin=dict(l=10, r=10, t=10, b=10), height=320,
+        margin=dict(l=5, r=5, t=5, b=5), height=380,
         font=dict(family=FONT_KR),
         dragmode=False,
-        hoverdistance=30,
+        hoverdistance=20,
     )
     return fig
 
@@ -2379,63 +2386,23 @@ def render_report(cd):
         </div>""", unsafe_allow_html=True)
 
     # ═══ 01. 워드 클라우드 ═══
-    divider("02 · 워드 클라우드")
-    wc1, wc2 = st.columns([3,1])
-    with wc1:
-        fig_wc = plot_wordcloud(df, center_word=label)
-        wc_key = f"wc_{label}"
-        try:
-            wc_event = st.plotly_chart(
-                fig_wc,
-                use_container_width=True,
-                config={**cfg_static(), 'displayModeBar': False},
-                on_select="rerun",
-                key=wc_key,
-            )
-            sel = wc_event.get("selection", {}) if isinstance(wc_event, dict) else {}
-            pts = sel.get("points", [])
-        except TypeError:
-            st.plotly_chart(fig_wc, use_container_width=True, config=cfg_static())
-            pts = []
-        # 마커 트레이스(index=1)에서 customdata 추출
-        matched_custom = ""
-        matched_text = ""
-        for pt in pts:
-            cd = pt.get("customdata", "")
-            tx = pt.get("text", "")
-            # 마커 트레이스는 text가 없고 customdata만 있음
-            if cd:
-                matched_custom = cd
-                break
-            if tx and not matched_custom:
-                matched_text = tx
-        # 텍스트 트레이스 클릭 시 같은 좌표의 customdata 찾기
-        if not matched_custom and pts:
-            pt = pts[0]
-            xi, yi = pt.get("x"), pt.get("y")
-            if xi is not None and fig_wc.data and len(fig_wc.data) > 1:
-                xs2 = list(fig_wc.data[1].x)
-                ys2 = list(fig_wc.data[1].y)
-                cds = list(fig_wc.data[1].customdata) if fig_wc.data[1].customdata is not None else []
-                for k, (xv, yv) in enumerate(zip(xs2, ys2)):
-                    if abs(float(xv)-float(xi))<0.01 and abs(float(yv)-float(yi))<0.01 and k < len(cds):
-                        matched_custom = cds[k]
-                        break
-        if matched_custom:
-            st.markdown(
-                f"<div style='background:rgba(20,20,40,0.92);color:white;border-radius:8px;"
-                f"padding:14px 18px;font-size:12px;line-height:2.0;font-family:{FONT_KR};"
-                f"margin-top:8px;'>{matched_custom}</div>",
-                unsafe_allow_html=True
-            )
-    with wc2:
-        st.markdown(f"""<div style='background:#F8F9FA;border-radius:6px;padding:10px;font-family:{FONT_KR};font-size:11px;'>
-        <div style='font-weight:700;color:#003366;margin-bottom:6px;'>범례</div>
-        <div style='margin-bottom:4px;'><span style='color:#C62828;font-weight:700;'>■</span> 부정 키워드</div>
-        <div style='margin-bottom:4px;'><span style='color:#1565C0;font-weight:700;'>■</span> 긍정 키워드</div>
-        <div style='margin-bottom:8px;'><span style='color:#888;font-weight:700;'>■</span> 중립 키워드</div>
-        <div style='font-size:10px;color:#aaa;'>글자 크기 = 언급 빈도<br>단어 클릭 시<br>상세 기사 확인 가능</div>
-        </div>""", unsafe_allow_html=True)
+    # 제목 + 범례 인라인
+    st.markdown(
+        f"""<div style='display:flex;align-items:center;gap:16px;border-bottom:2px solid #003366;
+        padding-bottom:6px;margin:20px 0 10px;flex-wrap:wrap;'>
+        <span style='font-size:15px;font-weight:800;color:#003366;letter-spacing:.5px;
+        font-family:{FONT_KR};'>02 · 워드 클라우드</span>
+        <span style='font-size:11px;color:#888;font-family:{FONT_KR};'>
+          <span style='color:#C62828;font-weight:700;'>■</span> 부정&nbsp;&nbsp;
+          <span style='color:#1565C0;font-weight:700;'>■</span> 긍정&nbsp;&nbsp;
+          <span style='color:#888;font-weight:700;'>■</span> 중립&nbsp;&nbsp;
+          <span style='color:#aaa;font-size:10px;'>| 글자 크기 = 언급 빈도 &nbsp;|&nbsp; 커서를 단어에 가져가면 상세 기사 확인 가능</span>
+        </span>
+        </div>""",
+        unsafe_allow_html=True
+    )
+    fig_wc = plot_wordcloud(df, center_word=label)
+    st.plotly_chart(fig_wc, use_container_width=True, config=cfg_static())
 
     # ═══ 02. 언론노출 추이 및 논조 분석 + 키워드 TOP3 ═══
     divider("03 · 언론노출 추이 및 논조 분석")
