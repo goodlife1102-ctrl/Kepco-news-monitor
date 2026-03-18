@@ -1895,19 +1895,12 @@ def plot_wordcloud(df, center_word='한국전력'):
         hoverinfo='skip',
         showlegend=False,
     ))
-    # 클릭 영역용 투명 마커 트레이스 (실제 클릭 이벤트 캡처)
+    # 클릭 영역용 투명 마커 트레이스 (hover 완전 비활성화, 클릭만 감지)
     marker_sizes = [max(s * 2.2, 28) for s in sizes]
     fig.add_trace(go.Scatter(
         x=xs, y=ys, mode='markers',
         marker=dict(size=marker_sizes, color='rgba(0,0,0,0)', opacity=0),
-        hovertemplate='%{customdata}<extra></extra>',
-        hoverlabel=dict(
-            bgcolor='rgba(20,20,40,0.92)',
-            bordercolor='rgba(255,255,255,0.15)',
-            font=dict(size=11, color='white', family=FONT_KR),
-            namelength=0,
-            align='left',
-        ),
+        hoverinfo='skip',
         customdata=hover,
         showlegend=False,
         name='',
