@@ -1948,8 +1948,8 @@ def plot_wordcloud(df, center_word='한국전력'):
         hoverinfo='skip',
         showlegend=False,
     ))
-    # hover 감지용 투명 마커 트레이스
-    marker_sizes = [max(s * 2.5, 32) for s in sizes]
+    # hover 감지용 투명 마커 트레이스 (글자 크기에 딱 맞게)
+    marker_sizes = [max(s * 0.85, 12) for s in sizes]
     fig.add_trace(go.Scatter(
         x=xs, y=ys, mode='markers',
         marker=dict(size=marker_sizes, color='rgba(0,0,0,0)', opacity=0),
@@ -2459,41 +2459,56 @@ def render_report(cd):
     # 툴팁 좌/우측 고정 JS
     components.html("""<script>
 (function() {
-  function fixTooltip() {
+  function attachTooltipFix() {
     var plots = window.parent.document.querySelectorAll('.js-plotly-plot');
     plots.forEach(function(plot) {
       if (plot._wc_fixed) return;
       plot._wc_fixed = true;
+
       plot.addEventListener('mousemove', function(e) {
         requestAnimationFrame(function() {
           var layer = plot.querySelector('.hoverlayer');
           if (!layer) return;
           var tip = layer.querySelector('g.hovertext');
           if (!tip) return;
-          var plotRect = plot.getBoundingClientRect();
-          var cx = e.clientX - plotRect.left;
-          var pw = plotRect.width;
+
+          // 마우스 위치를 SVG 좌표계로 변환
+          var svg = plot.querySelector('svg.main-svg');
+          if (!svg) return;
+          var svgRect = svg.getBoundingClientRect();
+          var mouseX = e.clientX - svgRect.left;
+          var svgW = svgRect.width;
+
+          // 현재 tooltip transform
           var t = tip.getAttribute('transform') || '';
-          var m = t.match(/translate\(([\d.\-]+),([\d.\-]+)\)/);
+          var m = t.match(/translate\(([\d.\-]+)\s*,\s*([\d.\-]+)\)/);
           if (!m) return;
           var tx = parseFloat(m[1]);
           var ty = parseFloat(m[2]);
-          var tipW = tip.getBBox ? tip.getBBox().width : 260;
+          var bb = tip.getBBox ? tip.getBBox() : {width: 260, height: 80};
+          var tipW = bb.width;
+
+          // 마우스 기준 오른쪽/왼쪽 배치
           var newX;
-          if (cx < pw * 0.5) {
-            newX = tx + tipW * 0.5 + 16;
+          var gap = 8;
+          if (mouseX < svgW * 0.5) {
+            // 왼쪽 절반 → 오른쪽에 표시 (마우스 위치 + gap)
+            newX = mouseX + gap;
           } else {
-            newX = tx - tipW * 0.5 - 16;
+            // 오른쪽 절반 → 왼쪽에 표시 (마우스 위치 - tipW - gap)
+            newX = mouseX - tipW - gap;
           }
-          tip.setAttribute('transform', 'translate(' + newX + ',' + ty + ')');
+          // Y는 마우스 근처에 고정
+          var newY = Math.max(10, Math.min(e.clientY - svgRect.top - bb.height / 2, svgRect.height - bb.height - 10));
+          tip.setAttribute('transform', 'translate(' + newX + ',' + newY + ')');
         });
       });
     });
   }
-  fixTooltip();
-  setTimeout(fixTooltip, 800);
-  setTimeout(fixTooltip, 2000);
-  var obs = new MutationObserver(fixTooltip);
+  attachTooltipFix();
+  setTimeout(attachTooltipFix, 600);
+  setTimeout(attachTooltipFix, 1800);
+  var obs = new MutationObserver(attachTooltipFix);
   obs.observe(window.parent.document.body, {childList:true, subtree:true});
 })();
 </script>""", height=0)
