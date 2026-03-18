@@ -929,9 +929,20 @@ def build_email_html(arts, df, label, period_str, days=1):
     more_row = ""
     if remain > 0:
         more_row = f"""<tr>
-          <td colspan='6' style='text-align:center;padding:14px;background:#F4F6F9;'>
-            <span style='font-size:12px;color:#888;'>10건만 표시 중 &nbsp;|&nbsp; 나머지 <b style='color:#003366;'>{remain}건</b>은 앱에서 확인하세요</span><br>
-            <a href='{APP_URL}?kw={requests.utils.quote(label)}&days={days}' target='_blank' style='display:inline-block;margin-top:8px;background:#003366;color:white;padding:7px 20px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:.3px;text-decoration:none;'>⚡ 전체 기사 {total}건 앱에서 보기 →</a>
+          <td colspan='6' style='text-align:center;padding:16px 14px;background:#F4F6F9;border-top:2px solid #e0e0e0;'>
+            <div style='font-size:12px;color:#888;margin-bottom:10px;'>
+              10건만 표시 중 &nbsp;|&nbsp; 나머지 <b style='color:#003366;'>{remain}건</b>은 앱에서 확인하세요
+            </div>
+            <table cellspacing='0' cellpadding='0' style='margin:0 auto;'>
+              <tr>
+                <td style='background:#003366;padding:10px 24px;' bgcolor='#003366'>
+                  <a href='{APP_URL}' target='_blank'
+                     style='color:#ffffff;font-size:13px;font-weight:700;text-decoration:none;display:block;white-space:nowrap;font-family:Malgun Gothic,Apple SD Gothic Neo,Arial,sans-serif;'>
+                    &#9889; 전체 기사 {total}건 앱에서 보기 &#8594;
+                  </a>
+                </td>
+              </tr>
+            </table>
           </td>
         </tr>"""
 
