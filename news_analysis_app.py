@@ -929,20 +929,9 @@ def build_email_html(arts, df, label, period_str, days=1):
     more_row = ""
     if remain > 0:
         more_row = f"""<tr>
-          <td colspan='6' style='text-align:center;padding:16px 14px;background:#F4F6F9;border-top:2px solid #e0e0e0;'>
-            <div style='font-size:12px;color:#888;margin-bottom:10px;'>
-              10건만 표시 중 &nbsp;|&nbsp; 나머지 <b style='color:#003366;'>{remain}건</b>은 앱에서 확인하세요
-            </div>
-            <table cellspacing='0' cellpadding='0' style='margin:0 auto;'>
-              <tr>
-                <td style='background:#003366;padding:10px 24px;' bgcolor='#003366'>
-                  <a href='{APP_URL}' target='_blank'
-                     style='color:#ffffff;font-size:13px;font-weight:700;text-decoration:none;display:block;white-space:nowrap;font-family:Malgun Gothic,Apple SD Gothic Neo,Arial,sans-serif;'>
-                    &#9889; 전체 기사 {total}건 앱에서 보기 &#8594;
-                  </a>
-                </td>
-              </tr>
-            </table>
+          <td colspan='6' style='text-align:center;padding:14px;background:#F4F6F9;'>
+            <span style='font-size:12px;color:#888;'>10건만 표시 중 &nbsp;|&nbsp; 나머지 <b style='color:#003366;'>{remain}건</b>은 앱에서 확인하세요</span><br>
+            <a href='{APP_URL}?kw={requests.utils.quote(label)}&days={days}' target='_blank' style='display:inline-block;margin-top:8px;background:#003366;color:white;padding:7px 20px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:.3px;text-decoration:none;'>⚡ 전체 기사 {total}건 앱에서 보기 →</a>
           </td>
         </tr>"""
 
@@ -1254,10 +1243,6 @@ def _collect_news_for(label, days):
     if not arts:
         return None, None, None
     arts = auto_cat(arts, label=label)
-    df = pd.DataFrame(arts)
-    end_dt   = datetime.now().date()
-    start_dt = end_dt - timedelta(days=max(1, int(days)))
-    period_str = f"{start_dt.strftime('%Y.%m.%d')} ~ {end_dt.strftime('%m.%d')}"
     return arts, df, period_str
 
 
@@ -1277,7 +1262,9 @@ def send_email_report(cfg, test_addr=None, is_broadcast_test=False, custom_messa
         ]
 
         fail_list = []
-        with smtplib.SMTP_SSL("smtp.naver.com", 465) as server:
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.ehlo()
+            server.starttls()
             server.login(cfg["sender_email"], cfg["sender_pw"])
             for sub in targets:
                 label = sub.get("keyword", "한국전력")
@@ -1357,7 +1344,9 @@ def apply_scheduler(cfg):
             def fn():
                 c = load_sub()
                 try:
-                    with smtplib.SMTP_SSL("smtp.naver.com", 465) as srv:
+                    with smtplib.SMTP("smtp.gmail.com", 587) as srv:
+                        srv.ehlo()
+                        srv.starttls()
                         srv.login(c["sender_email"], c["sender_pw"])
                         for sub in g:
                             label = sub.get("keyword","한국전력")
@@ -1753,7 +1742,6 @@ def mhdr(d):
 
 # ── 차트 함수 ──────────────────────────────────────────
 def cfg(): return {'displayModeBar':False}
-def cfg_static(): return {'displayModeBar':False,'scrollZoom':False,'doubleClick':False}
 
 def extract_article_keywords(df, center_word='', top_n=28):
     """실제 기사 헤드라인에서 핵심 명사 추출 (Okt 형태소 분석)"""
@@ -1843,137 +1831,51 @@ def plot_wordcloud(df, center_word='한국전력'):
     xs   = [0]
     ys   = [0]
     texts= [center_word]
-    sizes= [48]
+    sizes= [52]
     cols = ['#003366']
     hover= [f'<b>{center_word}</b> | 검색어 | {center_cnt}건']
 
-    def _overlaps(nx, ny, ns, placed, margin=1.15):
-        nw = ns * 0.55 * margin
-        nh = ns * 0.30 * margin
-        for px, py, ps in placed:
-            pw = ps * 0.55 * margin
-            ph = ps * 0.30 * margin
-            if abs(nx - px) < (nw + pw) and abs(ny - py) < (nh + ph):
-                return True
-        return False
-
-    placed = [(0, 0, 48 * 0.014)]
-
-    # 후보 위치 풀: 중심에서 랜덤하게 퍼진 비정형 좌표 미리 생성
-    random.seed(42 + len(items))
-    candidate_pool = []
-    for _ in range(1200):
-        # 균일 분포로 전체 영역에 흩뿌리기 (중심 근처 제외)
-        rx = random.uniform(-3.8, 3.8)
-        ry = random.uniform(-1.8, 1.8)
-        # 중심(검색어) 주변 0.8 이내는 제외
-        if abs(rx) < 0.8 and abs(ry) < 0.5:
-            continue
-        candidate_pool.append((rx, ry))
-    random.shuffle(candidate_pool)
-
+    angle_step = 2.399; r_step = 0.15; base_r = 0.45
     for i, (word, info) in enumerate(items):
         if word == center_word:
             continue
         sent, cnt = info[0], info[1]
         headlines_raw = info[2] if len(info) > 2 else []
 
-        ratio = cnt / max_cnt if max_cnt > 0 else 0
-        size = max(11, min(32, int(11 + ratio * 22)))
-        size_unit = size * 0.014
-
-        if sent == '부정':
-            alpha = 0.60 + ratio * 0.40
-            color = f'rgba(198,{int(30+ratio*15)},{int(30+ratio*15)},{alpha:.2f})'
-        elif sent == '긍정':
-            alpha = 0.60 + ratio * 0.40
-            color = f'rgba({int(18+ratio*12)},{int(90+ratio*40)},{int(185+ratio*35)},{alpha:.2f})'
-        else:
-            alpha = 0.45 + ratio * 0.40
-            color = f'rgba(80,80,80,{alpha:.2f})'
-
-        # 후보 풀에서 겹치지 않는 위치 탐색
-        placed_x, placed_y = None, None
-        for cx, cy in candidate_pool:
-            if not _overlaps(cx, cy, size_unit, placed):
-                placed_x, placed_y = cx, cy
-                candidate_pool.remove((cx, cy))
-                break
-
-        # 후보 풀 소진 시 마지막 수단: 범위를 점점 넓히며 랜덤 시도
-        if placed_x is None:
-            for attempt in range(60):
-                scale = 1.0 + attempt * 0.08
-                rx = random.uniform(-3.8 * scale, 3.8 * scale)
-                ry = random.uniform(-1.8 * scale, 1.8 * scale)
-                if not _overlaps(rx, ry, size_unit, placed):
-                    placed_x, placed_y = rx, ry
-                    break
-            if placed_x is None:
-                placed_x = random.uniform(-3.5, 3.5)
-                placed_y = random.uniform(-1.7, 1.7)
-
-        xs.append(placed_x); ys.append(placed_y); texts.append(word)
+        angle = i * angle_step
+        r = base_r + r_step * (i // 6)
+        x = r * np.cos(angle) * 2.2 + random.uniform(-0.1, 0.1)
+        y = r * np.sin(angle) + random.uniform(-0.07, 0.07)
+        size = max(13, min(34, int(13 + (cnt / max_cnt) * 22)))
+        color = '#C62828' if sent == '부정' else '#1565C0' if sent == '긍정' else '#777777'
+        xs.append(x); ys.append(y); texts.append(word)
         sizes.append(size); cols.append(color)
-        placed.append((placed_x, placed_y, size_unit))
 
         if headlines_raw:
-            hl_lines = "<br>".join([
-                f"· {h[2][:30]}"
-                f"<span style='color:#bbb;font-size:9px;'> {h[0]} {h[1]}</span>"
-                for h in headlines_raw[:3]
-            ])
+            hl_lines = "<br>".join([f"· {h[2][:26]}  <span style='color:#aaa;font-size:9px;'>({h[0]} {h[1]})</span>" for h in headlines_raw[:3]])
         else:
             mask = df['헤드라인'].str.contains(word, na=False, regex=False)
             sample = df[mask][['일자','매체','헤드라인']].head(3)
-            hl_lines = "<br>".join([
-                f"· {r2['헤드라인'][:30]}"
-                f"<span style='color:#bbb;font-size:9px;'> {r2['일자']} {r2['매체']}</span>"
-                for _, r2 in sample.iterrows()
-            ]) if not sample.empty else "헤드라인 없음"
+            hl_lines = "<br>".join([f"· {r2['헤드라인'][:26]}  <span style='color:#aaa;font-size:9px;'>({r2['일자']} {r2['매체']})</span>" for _,r2 in sample.iterrows()]) if not sample.empty else "헤드라인 없음"
 
-        sent_kr = {'부정':'🔴 부정','긍정':'🔵 긍정','중립':'🟡 중립'}.get(sent, sent)
-        hover.append(
-            f"<b style='font-size:13px;'>{word}</b>  {sent_kr}  {cnt}회"
-            f"<br><span style='color:#ccc;'>─────────────────</span><br>"
-            f"{hl_lines}"
-        )
+        hover.append(f'<b>{word}</b> | {sent} | {cnt}회<br>──────────<br>{hl_lines}')
+
 
     fig = go.Figure()
-    # 텍스트 표시용 트레이스
     fig.add_trace(go.Scatter(
         x=xs, y=ys, mode='text',
         text=texts,
         textfont=dict(size=sizes, color=cols, family=FONT_KR),
-        hoverinfo='skip',
-        showlegend=False,
-    ))
-    # hover 감지용 투명 마커 트레이스 (글자 크기에 딱 맞게)
-    marker_sizes = [max(s * 0.85, 12) for s in sizes]
-    fig.add_trace(go.Scatter(
-        x=xs, y=ys, mode='markers',
-        marker=dict(size=marker_sizes, color='rgba(0,0,0,0)', opacity=0),
-        hovertemplate='%{customdata}<extra></extra>',
-        hoverlabel=dict(
-            bgcolor='rgba(20,20,40,0.93)',
-            bordercolor='rgba(255,255,255,0.2)',
-            font=dict(size=11, color='white', family=FONT_KR),
-            namelength=0,
-            align='left',
-        ),
+        hovertext=hover, hoverinfo='text',
         customdata=hover,
-        showlegend=False,
-        name='',
     ))
     fig.add_annotation(x=0, y=0, text='', showarrow=False)
     fig.update_layout(
-        xaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[-4.0, 4.0]),
-        yaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[-2.0, 2.0]),
+        xaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[-3.5, 3.5]),
+        yaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[-1.6, 1.6]),
         paper_bgcolor='white', plot_bgcolor='#FAFBFC',
-        margin=dict(l=10, r=10, t=10, b=10), height=400,
+        margin=dict(l=5, r=5, t=5, b=5), height=280,
         font=dict(family=FONT_KR),
-        dragmode=False,
-        hoverdistance=20,
     )
     return fig
 
@@ -2104,8 +2006,7 @@ def plot_heatmap_with_hover(df):
         plot_bgcolor='white', paper_bgcolor='white',
         font=dict(family=FONT_KR, size=10),
         margin=dict(l=90, r=10, t=10, b=70), height=310,
-        annotations=annotations,
-        dragmode=False,
+        annotations=annotations
     )
     return fig
 
@@ -2439,79 +2340,19 @@ def render_report(cd):
         </div>""", unsafe_allow_html=True)
 
     # ═══ 01. 워드 클라우드 ═══
-    # 제목 + 범례 인라인
-    st.markdown(
-        f"""<div style='display:flex;align-items:center;gap:16px;border-bottom:2px solid #003366;
-        padding-bottom:6px;margin:20px 0 10px;flex-wrap:wrap;'>
-        <span style='font-size:15px;font-weight:800;color:#003366;letter-spacing:.5px;
-        font-family:{FONT_KR};'>02 · 워드 클라우드</span>
-        <span style='font-size:11px;color:#888;font-family:{FONT_KR};'>
-          <span style='color:#C62828;font-weight:700;'>■</span> 부정&nbsp;&nbsp;
-          <span style='color:#1565C0;font-weight:700;'>■</span> 긍정&nbsp;&nbsp;
-          <span style='color:#888;font-weight:700;'>■</span> 중립&nbsp;&nbsp;
-          <span style='color:#aaa;font-size:10px;'>| 글자 크기 = 언급 빈도 &nbsp;|&nbsp; 커서를 단어에 가져가면 상세 기사 확인 가능</span>
-        </span>
-        </div>""",
-        unsafe_allow_html=True
-    )
-    fig_wc = plot_wordcloud(df, center_word=label)
-    st.plotly_chart(fig_wc, use_container_width=True, config=cfg_static())
-    # 툴팁 좌/우측 고정 JS
-    components.html("""<script>
-(function() {
-  function attachTooltipFix() {
-    var plots = window.parent.document.querySelectorAll('.js-plotly-plot');
-    plots.forEach(function(plot) {
-      if (plot._wc_fixed) return;
-      plot._wc_fixed = true;
-
-      plot.addEventListener('mousemove', function(e) {
-        requestAnimationFrame(function() {
-          var layer = plot.querySelector('.hoverlayer');
-          if (!layer) return;
-          var tip = layer.querySelector('g.hovertext');
-          if (!tip) return;
-
-          // 마우스 위치를 SVG 좌표계로 변환
-          var svg = plot.querySelector('svg.main-svg');
-          if (!svg) return;
-          var svgRect = svg.getBoundingClientRect();
-          var mouseX = e.clientX - svgRect.left;
-          var svgW = svgRect.width;
-
-          // 현재 tooltip transform
-          var t = tip.getAttribute('transform') || '';
-          var m = t.match(/translate\(([\d.\-]+)\s*,\s*([\d.\-]+)\)/);
-          if (!m) return;
-          var tx = parseFloat(m[1]);
-          var ty = parseFloat(m[2]);
-          var bb = tip.getBBox ? tip.getBBox() : {width: 260, height: 80};
-          var tipW = bb.width;
-
-          // 마우스 기준 오른쪽/왼쪽 배치
-          var newX;
-          var gap = 8;
-          if (mouseX < svgW * 0.5) {
-            // 왼쪽 절반 → 오른쪽에 표시 (마우스 위치 + gap)
-            newX = mouseX + gap;
-          } else {
-            // 오른쪽 절반 → 왼쪽에 표시 (마우스 위치 - tipW - gap)
-            newX = mouseX - tipW - gap;
-          }
-          // Y는 마우스 근처에 고정
-          var newY = Math.max(10, Math.min(e.clientY - svgRect.top - bb.height / 2, svgRect.height - bb.height - 10));
-          tip.setAttribute('transform', 'translate(' + newX + ',' + newY + ')');
-        });
-      });
-    });
-  }
-  attachTooltipFix();
-  setTimeout(attachTooltipFix, 600);
-  setTimeout(attachTooltipFix, 1800);
-  var obs = new MutationObserver(attachTooltipFix);
-  obs.observe(window.parent.document.body, {childList:true, subtree:true});
-})();
-</script>""", height=0)
+    divider("02 · 워드 클라우드")
+    wc1, wc2 = st.columns([3,1])
+    with wc1:
+        fig_wc = plot_wordcloud(df, center_word=label)
+        st.plotly_chart(fig_wc, use_container_width=True, config=cfg())
+    with wc2:
+        st.markdown(f"""<div style='background:#F8F9FA;border-radius:6px;padding:10px;font-family:{FONT_KR};font-size:11px;'>
+        <div style='font-weight:700;color:#003366;margin-bottom:6px;'>범례</div>
+        <div style='margin-bottom:4px;'><span style='color:#C62828;font-weight:700;'>■</span> 부정 키워드</div>
+        <div style='margin-bottom:4px;'><span style='color:#1565C0;font-weight:700;'>■</span> 긍정 키워드</div>
+        <div style='margin-bottom:8px;'><span style='color:#888;font-weight:700;'>■</span> 중립 키워드</div>
+        <div style='font-size:10px;color:#aaa;'>글자 크기 = 언급 빈도<br>커서를 단어에 올리면<br>상세 정보 표시</div>
+        </div>""", unsafe_allow_html=True)
 
     # ═══ 02. 언론노출 추이 및 논조 분석 + 키워드 TOP3 ═══
     divider("03 · 언론노출 추이 및 논조 분석")
@@ -2668,7 +2509,7 @@ def render_report(cd):
     divider("05 · 매체×이슈 부정 보도 매트릭스 — 커서를 셀에 올리면 기사 확인")
     fig_hm = plot_heatmap_with_hover(df)
     if fig_hm:
-        st.plotly_chart(fig_hm, use_container_width=True, config=cfg_static())
+        st.plotly_chart(fig_hm, use_container_width=True, config=cfg())
     else:
         st.caption("데이터 부족으로 히트맵 생성 불가")
 
@@ -2850,9 +2691,8 @@ padding:7px 10px;border-radius:0 4px 4px 0;font-size:10px;color:#777;'>
                 xaxis=dict(tickformat="%m/%d", showgrid=False, tickangle=-30,
                            dtick=7*86400000, tickmode="linear"),
                 yaxis=dict(showgrid=True, gridcolor="#f5f5f5", rangemode="tozero"),
-                dragmode=False,
             )
-            st.plotly_chart(fig_crisis, use_container_width=True, config=cfg_static())
+            st.plotly_chart(fig_crisis, use_container_width=True, config=cfg())
         else:
             st.caption("최근 3개월 해당 키워드 데이터 없음")
 
@@ -3066,28 +2906,7 @@ padding:7px 10px;border-radius:0 4px 4px 0;font-size:10px;color:#777;'>
     dl1,dl2,dl3 = st.columns(3)
     with dl1:
         out=io.BytesIO()
-        # 시간 컬럼 제거 + 헤드라인에 하이퍼링크 적용
-        df_xl = df.drop(columns=[c for c in ['시간','월'] if c in df.columns], errors='ignore')
-        # 컬럼 순서: 키워드그룹, 일자, 매체, 등급, 열독률, 헤드라인, 요약, 감성, 카테고리, 기자 (링크 제거)
-        col_order = [c for c in ['키워드그룹','일자','매체','등급','열독률','헤드라인','요약','감성','카테고리','기자'] if c in df_xl.columns]
-        df_xl = df_xl[col_order]
-        with pd.ExcelWriter(out, engine='openpyxl') as w:
-            df_xl.to_excel(w, index=False, sheet_name="데이터")
-            ws = w.sheets["데이터"]
-            # 헤드라인 컬럼 인덱스 찾기 (1-based)
-            hl_col_idx = col_order.index('헤드라인') + 1 if '헤드라인' in col_order else None
-            if hl_col_idx:
-                from openpyxl.styles import Font
-                for row_idx, (_, row) in enumerate(df.iterrows(), start=2):
-                    url = str(row.get('링크', ''))
-                    cell = ws.cell(row=row_idx, column=hl_col_idx)
-                    if url and url.startswith('http'):
-                        cell.hyperlink = url
-                        cell.font = Font(color='0000FF', underline='single')
-            # 컬럼 너비 자동 조정
-            col_widths = {'키워드그룹':12,'일자':12,'매체':12,'등급':6,'열독률':8,'헤드라인':50,'요약':20,'감성':6,'카테고리':14,'기자':8}
-            for i, col_name in enumerate(col_order, start=1):
-                ws.column_dimensions[ws.cell(row=1, column=i).column_letter].width = col_widths.get(col_name, 12)
+        with pd.ExcelWriter(out,engine='openpyxl') as w: df.to_excel(w,index=False,sheet_name="데이터")
         out.seek(0)
         st.download_button("📥 엑셀", data=out, file_name=f"한전뉴스_{label}_{(datetime.utcnow()+timedelta(hours=9)).strftime('%Y%m%d')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, key=f"xl_{label}")
     with dl2:
@@ -3100,7 +2919,7 @@ padding:7px 10px;border-radius:0 4px 4px 0;font-size:10px;color:#777;'>
     st.markdown("---")
 
 # ══ APP ═══════════════════════════════════════════════
-st.set_page_config(page_title="홍보실에 꼭 필요한 뉴스 분석시스템", layout="wide", page_icon="⚡", initial_sidebar_state="expanded")
+st.set_page_config(page_title="홍보실에 꼭 필요한 뉴스 분석시스템_by 글쓰는 여행자", layout="wide", page_icon="⚡", initial_sidebar_state="collapsed")
 st.markdown(f"""<style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;800&display=swap');
 *,*::before,*::after{{box-sizing:border-box;}}
@@ -3149,43 +2968,8 @@ _custom_ticker = st.session_state.get("header_ticker", "")
 _custom_name   = st.session_state.get("header_company", "")
 md = get_market_data(custom_ticker=_custom_ticker)
 md["custom_name"] = _custom_name  # 표시명 덮어쓰기
-st.markdown(f"""<div style='background:#003366;color:white;padding:8px 16px;border-radius:5px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-family:{FONT_KR};'><span style='font-size:15px;font-weight:700;'>⚡ 홍보실에 꼭 필요한 뉴스 분석시스템</span><span style='font-size:8px;opacity:.65;'>{(datetime.utcnow()+timedelta(hours=9)).strftime('%Y.%m.%d')} | 열독률 등급 기반 | 네이버 뉴스 API</span></div>""", unsafe_allow_html=True)
+st.markdown(f"""<div style='background:#003366;color:white;padding:8px 16px;border-radius:5px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-family:{FONT_KR};'><span style='font-size:15px;font-weight:700;'>⚡ 홍보실에 꼭 필요한 뉴스 분석시스템</span><span style='font-size:10px;opacity:.7;margin-left:6px;'>by 글쓰는 여행자</span><span style='font-size:8px;opacity:.65;'>{(datetime.utcnow()+timedelta(hours=9)).strftime('%Y.%m.%d')} | 열독률 등급 기반 | 네이버 뉴스 API</span></div>""", unsafe_allow_html=True)
 st.markdown(mhdr(md), unsafe_allow_html=True)
-
-# 사이드바 토글 버튼 레이블 JS 주입
-components.html("""
-<script>
-(function labelSidebarToggle() {
-  function applyLabel() {
-    // collapsed 상태 버튼 (>> 아이콘)
-    var collapsed = window.parent.document.querySelector('[data-testid="collapsedControl"]');
-    if (collapsed && !collapsed.querySelector('.sidebar-label')) {
-      var span = window.parent.document.createElement('span');
-      span.className = 'sidebar-label';
-      span.style.cssText = 'font-size:10px;color:#003366;font-weight:700;white-space:nowrap;font-family:Noto Sans KR,sans-serif;margin-left:4px;';
-      span.textContent = '키워드 입력 바로가기';
-      collapsed.appendChild(span);
-    }
-    // expanded 상태 버튼 (<< 아이콘)
-    var expanded = window.parent.document.querySelector('[data-testid="expandedControl"]');
-    if (expanded && !expanded.querySelector('.sidebar-label')) {
-      var span2 = window.parent.document.createElement('span');
-      span2.className = 'sidebar-label';
-      span2.style.cssText = 'font-size:10px;color:#003366;font-weight:700;white-space:nowrap;font-family:Noto Sans KR,sans-serif;margin-left:4px;';
-      span2.textContent = '분석화면 바로가기';
-      expanded.appendChild(span2);
-    }
-  }
-  // 즉시 실행 + 0.5초, 1.5초 후 재시도 (Streamlit 렌더링 대기)
-  applyLabel();
-  setTimeout(applyLabel, 500);
-  setTimeout(applyLabel, 1500);
-  // MutationObserver로 DOM 변경 시 재적용
-  var observer = new MutationObserver(applyLabel);
-  observer.observe(window.parent.document.body, {childList: true, subtree: true});
-})();
-</script>
-""", height=0)
 
 with st.sidebar:
     st.markdown(f"<h3 style='font-family:{FONT_KR};'>분석 설정</h3>", unsafe_allow_html=True)
@@ -3200,7 +2984,12 @@ with st.sidebar:
         st.session_state["auto_run_done"] = True
 
     with st.form("mf", clear_on_submit=False):
-        keywords_input = st.text_input("🔍 키워드 (Enter=분석)", "", placeholder="키워드 입력 후 Enter")
+        kc1s,kc2s = st.columns([5,1])
+        with kc1s: keywords_input = st.text_input("🔍 키워드 (Enter=분석)", "", placeholder="키워드 입력 후 Enter")
+        with kc2s:
+            st.markdown("<div style='padding-top:24px;'>", unsafe_allow_html=True)
+            run = st.form_submit_button("Go", use_container_width=True)
+            st.markdown("</div>", unsafe_allow_html=True)
         st.caption("쉼표(,)=개별  |  플러스(+)=동시포함")
         st.markdown(
             f"<div style='font-size:10px;color:#E65100;background:#FFF3E0;border-left:3px solid #E65100;"
@@ -3212,7 +3001,6 @@ with st.sidebar:
         with cs1: start_date = st.date_input("시작일", datetime.now()-timedelta(days=7))
         with cs2: end_date = st.date_input("종료일", datetime.now())
         max_articles = st.select_slider("수집 기사 수", [500,1000,2000,3000,5000], value=1000)
-        run = st.form_submit_button("🔍 Go — 분석 시작", use_container_width=True)
 
     st.markdown("---")
     if st.session_state.history:
@@ -3479,11 +3267,11 @@ with st.sidebar:
             with st.form("sub_form", clear_on_submit=False):
                 st.markdown(
                     f"<div style='font-size:11px;font-weight:700;color:#003366;margin:8px 0 4px;"
-                    f"font-family:{FONT_KR};'>네이버 발신 계정</div>",
+                    f"font-family:{FONT_KR};'>Gmail 발신 계정</div>",
                     unsafe_allow_html=True
                 )
-                sub_sender  = st.text_input("발신 이메일 (네이버)", value=adm.get("sender_email",""), placeholder="yourname@naver.com")
-                sub_pw      = st.text_input("네이버 앱 비밀번호", value=adm.get("sender_pw",""), type="password")
+                sub_sender  = st.text_input("발신 이메일 (Gmail)", value=adm.get("sender_email",""), placeholder="yourname@gmail.com")
+                sub_pw      = st.text_input("Gmail 앱 비밀번호 (16자리)", value=adm.get("sender_pw",""), type="password")
                 sub_enabled = st.checkbox("구독 활성화", value=bool(adm.get("enabled", False)))
                 as1, as2    = st.columns(2)
                 with as1: save_btn = st.form_submit_button("저장", use_container_width=True)
@@ -3537,8 +3325,8 @@ with st.sidebar:
                 f"<div style='background:#FFF8E1;border-left:3px solid #F9A825;padding:8px 10px;"
                 f"border-radius:0 4px 4px 0;font-size:10px;color:#555;line-height:1.6;"
                 f"font-family:{FONT_KR};margin-top:8px;'>"
-                "네이버 메일 → 환경설정 → POP3/SMTP → SMTP 사용 선택<br>"
-                "내 정보 → 보안설정 → 앱 비밀번호 발급</div>",
+                "Google 계정 → 보안 → 2단계 인증 활성화<br>"
+                "→ 검색창에 '앱 비밀번호' 검색 → 16자리 발급 후 입력</div>",
                 unsafe_allow_html=True
             )
 
@@ -3680,4 +3468,4 @@ else:
                 if st.button("열람", key=f"v_{i}", use_container_width=True):
                     st.session_state.active_key=h['cache_key']; st.rerun()
     else:
-        st.markdown(f"""<div style='text-align:center;padding:50px;color:#aaa;font-family:{FONT_KR};'><div style='font-size:32px;'>⚡</div><div style='font-size:15px;font-weight:600;color:#003366;margin-top:8px;white-space:nowrap;'>홍보실에 꼭 필요한 뉴스 분석시스템</div><div style='font-size:11px;font-weight:500;color:#888;margin-top:3px;white-space:nowrap;'>by 글쓰는 여행자</div><div style='font-size:12px;margin-top:8px;'>좌측 키워드 입력 후 🚀 클릭</div></div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div style='text-align:center;padding:50px;color:#aaa;font-family:{FONT_KR};'><div style='font-size:32px;'>⚡</div><div style='font-size:15px;font-weight:600;color:#003366;margin-top:8px;'>홍보실에 꼭 필요한 뉴스 분석시스템 <span style="font-size:9px;opacity:.7;">by 글쓰는 여행자</span></div><div style='font-size:12px;margin-top:6px;'>좌측 키워드 입력 후 🚀 클릭</div></div>""", unsafe_allow_html=True)
