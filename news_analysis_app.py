@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 import re, io, random, json, os, smtplib, threading
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.header import Header
 from collections import Counter
 from docx import Document
 from docx.shared import Pt, RGBColor, Cm
@@ -1289,11 +1290,11 @@ def send_email_report(cfg, test_addr=None, is_broadcast_test=False, custom_messa
                     today_str = (datetime.utcnow()+timedelta(hours=9)).strftime('%Y.%m.%d')
                     subject   = (f"{prefix}[({today_str}) 글쓰는 여행자의 뉴스 모니터링 레포트] - {label}")
                     msg = MIMEMultipart("alternative")
-                    msg["Subject"] = subject
+                    msg["Subject"] = Header(subject, "utf-8")
                     msg["From"]    = cfg["sender_email"]
                     msg["To"]      = addr
                     msg.attach(MIMEText(html_body, "html", "utf-8"))
-                    server.sendmail(cfg["sender_email"], [addr], msg.as_string())
+                    server.sendmail(cfg["sender_email"], [addr], msg.as_bytes())
                 except Exception as e:
                     fail_list.append(f"{sub['email']}({e})")
 
@@ -1356,9 +1357,9 @@ def apply_scheduler(cfg):
                             addr = sub["email"]
                             subject = f"[KEPCO 뉴스] {label} 모니터링 리포트 — {(datetime.utcnow()+timedelta(hours=9)).strftime('%Y.%m.%d')}"
                             msg = MIMEMultipart("alternative")
-                            msg["Subject"]=subject; msg["From"]=c["sender_email"]; msg["To"]=addr
+                            msg["Subject"]=Header(subject,"utf-8"); msg["From"]=c["sender_email"]; msg["To"]=addr
                             msg.attach(MIMEText(html_body,"html","utf-8"))
-                            srv.sendmail(c["sender_email"],[addr],msg.as_string())
+                            srv.sendmail(c["sender_email"],[addr],msg.as_bytes())
                     c["last_sent"] = (datetime.utcnow()+timedelta(hours=9)).strftime("%Y-%m-%d %H:%M")
                     save_sub(c)
                 except Exception: pass
