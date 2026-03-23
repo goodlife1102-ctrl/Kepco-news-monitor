@@ -18,12 +18,20 @@ _raw_pw             = os.environ["GMAIL_APP_PW"]
 GMAIL_APP_PW        = ''.join(c for c in _raw_pw if c.isalnum())
 print(f"발신 계정: {GMAIL_SENDER}")
 print(f"앱 비밀번호 길이: {len(GMAIL_APP_PW)}자리")
-SUBSCRIBERS_JSON    = os.environ.get("SUBSCRIBERS", "[]")
+# 구독자 목록: subscribers.json 파일 우선, 없으면 환경변수 SUBSCRIBERS
+SUBSCRIBERS = []
+if os.path.exists("subscribers.json"):
+    try:
+        with open("subscribers.json", "r", encoding="utf-8") as f:
+            SUBSCRIBERS = json.load(f)
+        print(f"subscribers.json 에서 {len(SUBSCRIBERS)}명 로드")
+    except: pass
 
-try:
-    SUBSCRIBERS = json.loads(SUBSCRIBERS_JSON)
-except:
-    SUBSCRIBERS = []
+if not SUBSCRIBERS:
+    try:
+        SUBSCRIBERS = json.loads(os.environ.get("SUBSCRIBERS", "[]"))
+        print(f"환경변수에서 {len(SUBSCRIBERS)}명 로드")
+    except: pass
 
 if not SUBSCRIBERS:
     print("구독자 없음. 종료.")
