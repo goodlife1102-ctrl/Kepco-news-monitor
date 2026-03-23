@@ -86,5 +86,16 @@
     "company_ticker": "",
     "joined_at": "2026-03-23 16:18",
     "start_date": "2026-03-23"
+  },
+  {
+    "email": "imhyeon@gmail.com",
+    "keyword": "이노비즈",
+    "send_hour": 6,
+    "send_minute": 30,
+    "days": 1,
+    "company_name": "이노비즈",
+    "company_ticker": "",
+    "joined_at": "2026-03-23 16:18",
+    "start_date": "2026-03-23"
   }
 ]
