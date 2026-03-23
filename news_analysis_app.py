@@ -3189,6 +3189,7 @@ with st.sidebar:
         st.session_state["auto_run_kw"]   = _auto_kw
         st.session_state["auto_run_days"] = _auto_days
         st.session_state["auto_run_done"] = True
+        st.rerun()
 
     with st.form("mf", clear_on_submit=False):
         keywords_input = st.text_input("🔍 키워드 (Enter=분석)", "", placeholder="키워드 입력 후 Enter")
