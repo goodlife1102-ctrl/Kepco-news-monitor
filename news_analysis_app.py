@@ -1285,10 +1285,12 @@ def send_email_report(cfg, test_addr=None, is_broadcast_test=False, custom_messa
         ]
 
         fail_list = []
+        _sender = cfg["sender_email"].strip().replace(" ", "")
+        _pw     = cfg["sender_pw"].strip().replace(" ", "").replace(" ", "")
         with smtplib.SMTP("smtp.gmail.com", 587) as server:
             server.ehlo()
             server.starttls()
-            server.login(cfg["sender_email"], cfg["sender_pw"])
+            server.login(_sender, _pw)
             for sub in targets:
                 label = sub.get("keyword", "한국전력")
                 days  = sub.get("days", cfg.get("days", 1))  # 구독자별 설정 우선
@@ -1313,7 +1315,7 @@ def send_email_report(cfg, test_addr=None, is_broadcast_test=False, custom_messa
                     subject   = (f"{prefix}[({today_str}) 글쓰는 여행자의 뉴스 모니터링 레포트] - {label}")
                     msg = MIMEMultipart("alternative")
                     msg["Subject"] = Header(subject, "utf-8")
-                    msg["From"]    = cfg["sender_email"]
+                    msg["From"]    = _sender
                     msg["To"]      = addr
                     msg.attach(MIMEText(html_body, "html", "utf-8"))
                     server.send_message(msg)
@@ -1367,10 +1369,12 @@ def apply_scheduler(cfg):
             def fn():
                 c = load_sub()
                 try:
+                    _s_sender = c["sender_email"].strip().replace(" ", "")
+                    _s_pw     = c["sender_pw"].strip().replace(" ", "").replace(" ", "")
                     with smtplib.SMTP("smtp.gmail.com", 587) as srv:
                         srv.ehlo()
                         srv.starttls()
-                        srv.login(c["sender_email"], c["sender_pw"])
+                        srv.login(_s_sender, _s_pw)
                         for sub in g:
                             label = sub.get("keyword","한국전력")
                             arts, df, period_str = _collect_news_for(label, c.get("days",1))
