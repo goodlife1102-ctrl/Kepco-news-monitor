@@ -1266,6 +1266,8 @@ def _collect_news_for(label, days):
     if not arts:
         return None, None, None
     arts = auto_cat(arts, label=label)
+    df = pd.DataFrame(arts)
+    period_str = f"{start_dt.strftime('%Y.%m.%d')} ~ {end_dt.strftime('%m.%d')}"
     return arts, df, period_str
 
 
