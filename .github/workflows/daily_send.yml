@@ -1,1 +1,29 @@
+name: 뉴스 알리미 자동 발송
 
+on:
+  schedule:
+    - cron: '30 21 * * *'
+  workflow_dispatch:
+
+jobs:
+  send-news:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Python 설치
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: 패키지 설치
+        run: pip install requests pandas
+
+      - name: 뉴스 알리미 발송
+        env:
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          GMAIL_SENDER: ${{ secrets.GMAIL_SENDER }}
+          GMAIL_APP_PW: ${{ secrets.GMAIL_APP_PW }}
+          SUBSCRIBERS: ${{ secrets.SUBSCRIBERS }}
+        run: python send_daily.py
