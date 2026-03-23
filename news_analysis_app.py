@@ -1773,7 +1773,7 @@ def mhdr(d):
 def cfg(): return {
     'displayModeBar': False,
     'scrollZoom': False,
-    'doubleClick': False,
+    'doubleClick': 'reset',
     'modeBarButtonsToRemove': ['zoom2d','pan2d','select2d','lasso2d','zoomIn2d','zoomOut2d','autoScale2d','resetScale2d'],
     'staticPlot': False,
 }
@@ -2908,6 +2908,7 @@ padding:7px 10px;border-radius:0 4px 4px 0;font-size:10px;color:#777;'>
         font=dict(family=FONT_KR),
         margin=dict(l=45, r=45, t=50, b=55),
         height=310,
+        dragmode=False,
         title=dict(text=f"<b>주요 비판 포인트 우선순위</b><br><sub style='font-size:9px;color:#888;'>비판 강도(5점 만점)</sub>",
                    font=dict(size=12, color='#003366', family=FONT_KR), x=0.5, xanchor='center'),
     )
