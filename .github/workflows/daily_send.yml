@@ -2,7 +2,7 @@ name: 뉴스 알리미 자동 발송
 
 on:
   schedule:
-    - cron: '30 21 * * *'
+    - cron: '0 20 * * *'  # UTC 20:00 = KST 05:00 (지연 감안해 1.5시간 일찍 실행)
   workflow_dispatch:
 
 jobs:
