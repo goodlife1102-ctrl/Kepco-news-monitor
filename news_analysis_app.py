@@ -3262,12 +3262,14 @@ with st.sidebar:
                 value="", placeholder="예: 삼성전자, SK하이닉스, 한국전력"
             )
             st.caption("코스피·코스닥 상장사명 입력 시 티커 자동 조회")
-            uh1, uh2    = st.columns(2)
-            with uh1:
-                user_hour   = st.number_input("발송 시각 (0~23시)", min_value=0, max_value=23, value=6, step=1)
-            with uh2:
-                user_minute = st.selectbox("발송 분", [0, 10, 20, 30, 40, 50], index=3,
-                                           format_func=lambda x: f"{x:02d}분")
+            st.markdown(
+                f"<div style='font-size:10px;color:#1565C0;background:#E3F2FD;border-left:3px solid #1565C0;"
+                f"padding:5px 8px;border-radius:0 4px 4px 0;margin:4px 0;font-family:{FONT_KR};'>"
+                f"📬 매일 아침 6:30에 자동 발송됩니다</div>",
+                unsafe_allow_html=True
+            )
+            user_hour   = 6
+            user_minute = 30
             uc1, uc2 = st.columns(2)
             with uc1: sub_btn   = st.form_submit_button("구독 신청", use_container_width=True)
             with uc2: unsub_btn = st.form_submit_button("구독 해제", use_container_width=True)
@@ -3330,8 +3332,7 @@ with st.sidebar:
                             get_market_data.clear()
                         co_txt = f" · 📌 {resolved_name} 주가 헤더 등록" if resolved_ticker else ""
                         st.success(
-                            f"매일 {int(user_hour):02d}:{int(user_minute):02d}에 "
-                            f"[{user_kw}] 뉴스 리포트를 보내드립니다.{co_txt}"
+                            f"✅ 매일 아침 6:30에 [{user_kw}] 뉴스 리포트를 보내드립니다.{co_txt}"
                         )
                 else:
                     if addr not in emails:
@@ -3542,28 +3543,7 @@ with st.sidebar:
                 unsafe_allow_html=True
             )
 
-            # ── Secrets 백업 안내 ──
-            st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
-            adm_backup = load_sub()
-            subs_json  = json.dumps(adm_backup.get("subscribers", []), ensure_ascii=False)
-            st.markdown(
-                f"<div style='font-size:11px;font-weight:700;color:#003366;margin-bottom:4px;"
-                f"font-family:{FONT_KR};'>💾 앱 슬립 후에도 구독자 유지하는 법</div>",
-                unsafe_allow_html=True
-            )
-            st.markdown(
-                "<div style='background:#E8F5E9;border-left:3px solid #2E7D32;padding:10px 12px;"
-                "border-radius:0 4px 4px 0;font-size:10px;color:#333;line-height:1.8;'>"
-                "<b>① Streamlit Cloud → 앱 → Settings → Secrets 에 아래 3줄 추가</b><br>"
-                "GMAIL_SENDER = 발신Gmail주소<br>"
-                "GMAIL_APP_PW = 16자리앱비밀번호<br>"
-                "SUBSCRIBERS = 아래JSON복사<br><br>"
-                "<b>② 아래 JSON 복사 → SUBSCRIBERS 값에 붙여넣기</b>"
-                "</div>",
-                unsafe_allow_html=True
-            )
-            st.code(subs_json, language="json")
-            st.caption("위 JSON을 복사 → Streamlit Secrets의 SUBSCRIBERS = '...' 안에 붙여넣으세요.")
+
 
 
 # ── URL 파라미터 자동 분석 실행 ──
