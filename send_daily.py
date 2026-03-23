@@ -13,8 +13,11 @@ from collections import Counter
 # ── 환경변수에서 시크릿 로드 ──
 NAVER_CLIENT_ID     = os.environ["NAVER_CLIENT_ID"]
 NAVER_CLIENT_SECRET = os.environ["NAVER_CLIENT_SECRET"]
-GMAIL_SENDER        = os.environ["GMAIL_SENDER"].strip().replace("\xa0","")
-GMAIL_APP_PW        = os.environ["GMAIL_APP_PW"].strip().replace("\xa0","").replace(" ","")
+GMAIL_SENDER        = os.environ["GMAIL_SENDER"].strip().replace("\xa0","").replace('"','').replace("'",'')
+_raw_pw             = os.environ["GMAIL_APP_PW"]
+GMAIL_APP_PW        = ''.join(c for c in _raw_pw if c.isalnum())
+print(f"발신 계정: {GMAIL_SENDER}")
+print(f"앱 비밀번호 길이: {len(GMAIL_APP_PW)}자리")
 SUBSCRIBERS_JSON    = os.environ.get("SUBSCRIBERS", "[]")
 
 try:
