@@ -200,7 +200,7 @@ def collect_and_build_html(label, days):
     {'<table style="width:100%;border-collapse:collapse;">' + pos_rows + '</table>' if pos_rows else '<p style="color:#aaa;font-size:12px;">긍정 기사 없음</p>'}
   </div>
   <div style='padding:14px 24px;text-align:center;border-bottom:1px solid #eee;'>
-    <a href='{APP_URL}' target='_blank' style='display:inline-block;background:#003366;color:white;padding:10px 28px;border-radius:20px;font-size:13px;font-weight:700;text-decoration:none;'>⚡ 전체 분석 보고서 앱에서 보기 →</a>
+    <a href='{APP_URL}?kw={label}&days={days}' target='_blank' style='display:inline-block;background:#003366;color:white;padding:10px 28px;border-radius:20px;font-size:13px;font-weight:700;text-decoration:none;'>⚡ 전체 분석 보고서 앱에서 보기 →</a>
   </div>
   <div style='background:#f8f8f8;padding:12px 24px;font-size:10px;color:#aaa;text-align:center;'>
     ⚡ 홍보실에 꼭 필요한 뉴스 분석시스템 by 글쓰는 여행자 | 네이버 뉴스 API 기반<br>
