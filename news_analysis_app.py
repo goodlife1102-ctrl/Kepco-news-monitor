@@ -772,21 +772,43 @@ def calc_pr_risk(neg_n,total,neg_kws,crisis_found,top_neg_media):
 SUBSCRIPTION_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "subscription.json")
 
 def load_sub():
+    # ── 1순위: 세션 내 저장 파일 ──
     try:
         with open(SUBSCRIPTION_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
+        # Secrets 발신 계정 항상 덮어쓰기
+        if st.secrets.get("GMAIL_SENDER"):
+            data["sender_email"] = st.secrets["GMAIL_SENDER"]
+            data["sender_pw"]    = st.secrets["GMAIL_APP_PW"]
+            data["enabled"]      = True
+        # 파일에 구독자 없으면 Secrets에서 복원
+        if not data.get("subscribers") and st.secrets.get("SUBSCRIBERS"):
+            try:
+                data["subscribers"] = json.loads(st.secrets["SUBSCRIBERS"])
+            except:
+                pass
+        return data
     except:
-        return {
-            "enabled": False,
-            "sender_email": "",
-            "sender_pw": "",
-            "recipients": "",
-            "send_hour": 6,
-            "send_minute": 30,
-            "keyword": "한국전력",
-            "days": 1,
-            "last_sent": "",
-        }
+        pass
+    # ── 2순위: Secrets에서 완전 복원 ──
+    cfg = {
+        "enabled":      bool(st.secrets.get("GMAIL_SENDER")),
+        "sender_email": st.secrets.get("GMAIL_SENDER", ""),
+        "sender_pw":    st.secrets.get("GMAIL_APP_PW", ""),
+        "recipients":   "",
+        "send_hour":    6,
+        "send_minute":  30,
+        "keyword":      "한국전력",
+        "days":         1,
+        "last_sent":    "",
+        "subscribers":  [],
+    }
+    if st.secrets.get("SUBSCRIBERS"):
+        try:
+            cfg["subscribers"] = json.loads(st.secrets["SUBSCRIBERS"])
+        except:
+            pass
+    return cfg
 
 def save_sub(cfg):
     try:
@@ -3330,6 +3352,29 @@ with st.sidebar:
                 "→ 검색창에 '앱 비밀번호' 검색 → 16자리 발급 후 입력</div>",
                 unsafe_allow_html=True
             )
+
+            # ── Secrets 백업 안내 ──
+            st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
+            adm_backup = load_sub()
+            subs_json  = json.dumps(adm_backup.get("subscribers", []), ensure_ascii=False)
+            st.markdown(
+                f"<div style='font-size:11px;font-weight:700;color:#003366;margin-bottom:4px;"
+                f"font-family:{FONT_KR};'>💾 앱 슬립 후에도 구독자 유지하는 법</div>",
+                unsafe_allow_html=True
+            )
+            st.markdown(
+                "<div style='background:#E8F5E9;border-left:3px solid #2E7D32;padding:10px 12px;"
+                "border-radius:0 4px 4px 0;font-size:10px;color:#333;line-height:1.8;'>"
+                "<b>① Streamlit Cloud → 앱 → Settings → Secrets 에 아래 3줄 추가</b><br>"
+                "GMAIL_SENDER = 발신Gmail주소<br>"
+                "GMAIL_APP_PW = 16자리앱비밀번호<br>"
+                "SUBSCRIBERS = 아래JSON복사<br><br>"
+                "<b>② 아래 JSON 복사 → SUBSCRIBERS 값에 붙여넣기</b>"
+                "</div>",
+                unsafe_allow_html=True
+            )
+            st.code(subs_json, language="json")
+            st.caption("위 JSON을 복사 → Streamlit Secrets의 SUBSCRIBERS = '...' 안에 붙여넣으세요.")
 
 
 # ── URL 파라미터 자동 분석 실행 ──
