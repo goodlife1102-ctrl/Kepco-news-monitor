@@ -1,0 +1,35 @@
+[
+  {
+    "email": "speechwriter@kakao.com",
+    "keyword": "한국전력",
+    "send_hour": 6,
+    "send_minute": 30,
+    "days": 2,
+    "company_name": "한국전력",
+    "company_ticker": "015760.KS",
+    "joined_at": "2026-03-23 09:24",
+    "start_date": "2026-03-23"
+  },
+  {
+    "email": "jinjin622@hanmail.net",
+    "keyword": "한국전력",
+    "send_hour": 6,
+    "send_minute": 30,
+    "days": 2,
+    "company_name": "한국전력",
+    "company_ticker": "015760.KS",
+    "joined_at": "2026-03-23 15:45",
+    "start_date": "2026-03-23"
+  },
+  {
+    "email": "life1102@naver.com",
+    "keyword": "하이닉스",
+    "send_hour": 6,
+    "send_minute": 30,
+    "days": 1,
+    "company_name": "하이닉스",
+    "company_ticker": "",
+    "joined_at": "2026-03-23 15:56",
+    "start_date": "2026-03-23"
+  }
+]
