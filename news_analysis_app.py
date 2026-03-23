@@ -810,10 +810,51 @@ def load_sub():
             pass
     return cfg
 
+def _sync_github_secrets(subscribers):
+    """구독자 목록을 GitHub Secrets SUBSCRIBERS에 자동 동기화"""
+    try:
+        gh_token = st.secrets.get("GITHUB_TOKEN", "")
+        gh_owner = st.secrets.get("GITHUB_OWNER", "")
+        gh_repo  = st.secrets.get("GITHUB_REPO", "")
+        if not gh_token or not gh_owner or not gh_repo:
+            return  # Secrets 미설정 시 조용히 스킵
+
+        import urllib.request, base64
+
+        # 1. 공개키 획득
+        pk_url = f"https://api.github.com/repos/{gh_owner}/{gh_repo}/actions/secrets/public-key"
+        req = urllib.request.Request(pk_url, headers={
+            "Authorization": f"token {gh_token}",
+            "Accept": "application/vnd.github+json",
+        })
+        with urllib.request.urlopen(req, timeout=5) as res:
+            pk = json.loads(res.read())
+        key_id  = pk["key_id"]
+        pub_b64 = pk["key"]
+
+        # 2. 값 암호화 (단순 base64 — GitHub가 서버에서 복호화)
+        subs_json = json.dumps(subscribers, ensure_ascii=False)
+        encrypted = base64.b64encode(subs_json.encode()).decode()
+
+        # 3. Secret 업데이트
+        sec_url  = f"https://api.github.com/repos/{gh_owner}/{gh_repo}/actions/secrets/SUBSCRIBERS"
+        data     = json.dumps({"encrypted_value": encrypted, "key_id": key_id}).encode()
+        req2 = urllib.request.Request(sec_url, data=data, method="PUT", headers={
+            "Authorization": f"token {gh_token}",
+            "Accept": "application/vnd.github+json",
+            "Content-Type": "application/json",
+        })
+        urllib.request.urlopen(req2, timeout=5)
+    except Exception:
+        pass  # 동기화 실패해도 앱 동작에 영향 없음
+
+
 def save_sub(cfg):
     try:
         with open(SUBSCRIPTION_FILE, "w", encoding="utf-8") as f:
             json.dump(cfg, f, ensure_ascii=False, indent=2)
+        # 구독자 변경 시 GitHub Secrets 자동 동기화
+        _sync_github_secrets(cfg.get("subscribers", []))
         return True
     except:
         return False
