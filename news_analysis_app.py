@@ -811,42 +811,46 @@ def load_sub():
     return cfg
 
 def _sync_github_secrets(subscribers):
-    """구독자 목록을 GitHub Secrets SUBSCRIBERS에 자동 동기화"""
+    """구독자 목록을 GitHub 저장소 파일(subscribers.json)에 자동 동기화"""
     try:
         gh_token = st.secrets.get("GITHUB_TOKEN", "")
         gh_owner = st.secrets.get("GITHUB_OWNER", "")
         gh_repo  = st.secrets.get("GITHUB_REPO", "")
         if not gh_token or not gh_owner or not gh_repo:
-            return  # Secrets 미설정 시 조용히 스킵
+            return
 
         import urllib.request, base64
 
-        # 1. 공개키 획득
-        pk_url = f"https://api.github.com/repos/{gh_owner}/{gh_repo}/actions/secrets/public-key"
-        req = urllib.request.Request(pk_url, headers={
-            "Authorization": f"token {gh_token}",
-            "Accept": "application/vnd.github+json",
-        })
-        with urllib.request.urlopen(req, timeout=5) as res:
-            pk = json.loads(res.read())
-        key_id  = pk["key_id"]
-        pub_b64 = pk["key"]
+        subs_json = json.dumps(subscribers, ensure_ascii=False, indent=2)
+        content_b64 = base64.b64encode(subs_json.encode()).decode()
 
-        # 2. 값 암호화 (단순 base64 — GitHub가 서버에서 복호화)
-        subs_json = json.dumps(subscribers, ensure_ascii=False)
-        encrypted = base64.b64encode(subs_json.encode()).decode()
-
-        # 3. Secret 업데이트
-        sec_url  = f"https://api.github.com/repos/{gh_owner}/{gh_repo}/actions/secrets/SUBSCRIBERS"
-        data     = json.dumps({"encrypted_value": encrypted, "key_id": key_id}).encode()
-        req2 = urllib.request.Request(sec_url, data=data, method="PUT", headers={
+        # 기존 파일 SHA 조회 (업데이트 시 필요)
+        file_url = f"https://api.github.com/repos/{gh_owner}/{gh_repo}/contents/subscribers.json"
+        headers = {
             "Authorization": f"token {gh_token}",
             "Accept": "application/vnd.github+json",
             "Content-Type": "application/json",
-        })
-        urllib.request.urlopen(req2, timeout=5)
+        }
+        sha = None
+        try:
+            req_get = urllib.request.Request(file_url, headers=headers)
+            with urllib.request.urlopen(req_get, timeout=5) as res:
+                sha = json.loads(res.read()).get("sha")
+        except: pass
+
+        # 파일 생성 또는 업데이트
+        body = {"message": "구독자 목록 자동 업데이트", "content": content_b64}
+        if sha:
+            body["sha"] = sha
+        req_put = urllib.request.Request(
+            file_url,
+            data=json.dumps(body).encode(),
+            method="PUT",
+            headers=headers,
+        )
+        urllib.request.urlopen(req_put, timeout=5)
     except Exception:
-        pass  # 동기화 실패해도 앱 동작에 영향 없음
+        pass
 
 
 def save_sub(cfg):
