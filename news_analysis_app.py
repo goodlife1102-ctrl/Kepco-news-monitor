@@ -1294,7 +1294,7 @@ def send_email_report(cfg, test_addr=None, is_broadcast_test=False, custom_messa
                     msg["From"]    = cfg["sender_email"]
                     msg["To"]      = addr
                     msg.attach(MIMEText(html_body, "html", "utf-8"))
-                    server.sendmail(cfg["sender_email"], [addr], msg.as_bytes())
+                    server.send_message(msg)
                 except Exception as e:
                     fail_list.append(f"{sub['email']}({e})")
 
@@ -1359,7 +1359,7 @@ def apply_scheduler(cfg):
                             msg = MIMEMultipart("alternative")
                             msg["Subject"]=Header(subject,"utf-8"); msg["From"]=c["sender_email"]; msg["To"]=addr
                             msg.attach(MIMEText(html_body,"html","utf-8"))
-                            srv.sendmail(c["sender_email"],[addr],msg.as_bytes())
+                            srv.send_message(msg)
                     c["last_sent"] = (datetime.utcnow()+timedelta(hours=9)).strftime("%Y-%m-%d %H:%M")
                     save_sub(c)
                 except Exception: pass
