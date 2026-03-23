@@ -1844,11 +1844,9 @@ def plot_wordcloud(df, center_word='한국전력'):
     art_kws = extract_article_keywords(df, center_word=center_word, top_n=30)
 
     if art_kws:
-        # 감성 색상: 부정>중립 → 빨강, 긍정>중립 → 파랑, 균형 → 회색
-        items = list(art_kws.items())  # [(word, (sent, cnt, headlines))]
+        items = list(art_kws.items())
         max_cnt = items[0][1][1] if items else 1
     else:
-        # fallback: 기존 POSITIVE/NEGATIVE 방식
         word_data = {}
         for sent, words in [('부정', NEGATIVE_WORDS), ('긍정', POSITIVE_WORDS)]:
             sub = df[df['감성']==sent]
@@ -1870,48 +1868,125 @@ def plot_wordcloud(df, center_word='한국전력'):
     cols = ['#003366']
     hover= [f'<b>{center_word}</b> | 검색어 | {center_cnt}건']
 
-    angle_step = 2.399; r_step = 0.15; base_r = 0.45
+    # ── 충돌 방지 배치 알고리즘 ──────────────────────────────
+    def _overlaps(nx, ny, ns, placed, margin=1.3):
+        """nx,ny 위치에 크기 ns 단어를 놓을 때 기존 placed와 겹치는지 확인"""
+        nw = ns * 0.55 * margin   # 단어 너비 추정 (글자크기 * 평균글자수 비율)
+        nh = ns * 0.32 * margin   # 단어 높이 추정
+        for px, py, ps in placed:
+            pw = ps * 0.55 * margin
+            ph = ps * 0.32 * margin
+            if abs(nx - px) < (nw + pw) and abs(ny - py) < (nh + ph):
+                return True
+        return False
+
+    # 좌표 범위: x=-3.8~3.8, y=-1.8~1.8 (중심 제외)
+    placed = [(0, 0, 52 * 0.014)]  # 중심 단어 영역 등록
+
+    # 후보 위치 풀: 나선형 + 무작위 혼합
+    random.seed(42)
+    candidate_pool = []
+    for ring in range(1, 12):
+        n_pts = ring * 8
+        for j in range(n_pts):
+            angle = (j / n_pts) * 2 * np.pi + ring * 0.3
+            rx = ring * 0.48 * np.cos(angle) * 2.0 + random.uniform(-0.12, 0.12)
+            ry = ring * 0.28 * np.sin(angle) + random.uniform(-0.08, 0.08)
+            if abs(rx) <= 3.6 and abs(ry) <= 1.7:
+                candidate_pool.append((rx, ry))
+    random.shuffle(candidate_pool)
+
     for i, (word, info) in enumerate(items):
         if word == center_word:
             continue
         sent, cnt = info[0], info[1]
         headlines_raw = info[2] if len(info) > 2 else []
 
-        angle = i * angle_step
-        r = base_r + r_step * (i // 6)
-        x = r * np.cos(angle) * 2.2 + random.uniform(-0.1, 0.1)
-        y = r * np.sin(angle) + random.uniform(-0.07, 0.07)
-        size = max(13, min(34, int(13 + (cnt / max_cnt) * 22)))
+        ratio = cnt / max_cnt if max_cnt > 0 else 0
+        size = max(12, min(34, int(12 + ratio * 23)))
+        size_unit = size * 0.014
+
         color = '#C62828' if sent == '부정' else '#1565C0' if sent == '긍정' else '#777777'
-        xs.append(x); ys.append(y); texts.append(word)
-        sizes.append(size); cols.append(color)
+
+        # 후보 풀에서 겹치지 않는 첫 위치 선택
+        placed_x, placed_y = None, None
+        for cx, cy in candidate_pool[:]:
+            if not _overlaps(cx, cy, size_unit, placed):
+                placed_x, placed_y = cx, cy
+                candidate_pool.remove((cx, cy))
+                break
+
+        # 풀 소진 시 범위 확장하며 랜덤 시도
+        if placed_x is None:
+            for attempt in range(80):
+                scale = 1.0 + attempt * 0.06
+                rx = random.uniform(-3.6 * scale, 3.6 * scale)
+                ry = random.uniform(-1.7 * scale, 1.7 * scale)
+                if not _overlaps(rx, ry, size_unit, placed):
+                    placed_x, placed_y = rx, ry
+                    break
+            if placed_x is None:
+                placed_x = random.uniform(-3.4, 3.4)
+                placed_y = random.uniform(-1.6, 1.6)
+
+        xs.append(placed_x); ys.append(placed_y)
+        texts.append(word); sizes.append(size); cols.append(color)
+        placed.append((placed_x, placed_y, size_unit))
 
         if headlines_raw:
-            hl_lines = "<br>".join([f"· {h[2][:26]}  <span style='color:#aaa;font-size:9px;'>({h[0]} {h[1]})</span>" for h in headlines_raw[:3]])
+            hl_lines = "<br>".join([
+                f"· {h[2][:28]}  <span style='color:#bbb;font-size:9px;'>({h[0]} {h[1]})</span>"
+                for h in headlines_raw[:3]
+            ])
         else:
             mask = df['헤드라인'].str.contains(word, na=False, regex=False)
             sample = df[mask][['일자','매체','헤드라인']].head(3)
-            hl_lines = "<br>".join([f"· {r2['헤드라인'][:26]}  <span style='color:#aaa;font-size:9px;'>({r2['일자']} {r2['매체']})</span>" for _,r2 in sample.iterrows()]) if not sample.empty else "헤드라인 없음"
+            hl_lines = "<br>".join([
+                f"· {r2['헤드라인'][:28]}  <span style='color:#bbb;font-size:9px;'>({r2['일자']} {r2['매체']})</span>"
+                for _, r2 in sample.iterrows()
+            ]) if not sample.empty else "헤드라인 없음"
 
-        hover.append(f'<b>{word}</b> | {sent} | {cnt}회<br>──────────<br>{hl_lines}')
-
+        sent_kr = {'부정':'🔴 부정','긍정':'🔵 긍정','중립':'🟡 중립'}.get(sent, sent)
+        hover.append(
+            f"<b style='font-size:13px;'>{word}</b>  {sent_kr}  {cnt}회"
+            f"<br><span style='color:#ccc;'>─────────────────</span><br>"
+            f"{hl_lines}"
+        )
 
     fig = go.Figure()
+    # 텍스트 렌더링 트레이스
     fig.add_trace(go.Scatter(
         x=xs, y=ys, mode='text',
         text=texts,
         textfont=dict(size=sizes, color=cols, family=FONT_KR),
-        hovertext=hover, hoverinfo='text',
-        customdata=hover,
+        hoverinfo='skip',
+        showlegend=False,
     ))
-    fig.add_annotation(x=0, y=0, text='', showarrow=False)
+    # hover 감지용 투명 마커 트레이스
+    marker_sizes = [max(s * 0.9, 14) for s in sizes]
+    fig.add_trace(go.Scatter(
+        x=xs, y=ys, mode='markers',
+        marker=dict(size=marker_sizes, color='rgba(0,0,0,0)', opacity=0),
+        hovertemplate='%{customdata}<extra></extra>',
+        hoverlabel=dict(
+            bgcolor='rgba(20,20,40,0.93)',
+            bordercolor='rgba(255,255,255,0.2)',
+            font=dict(size=11, color='white', family=FONT_KR),
+            namelength=0,
+            align='left',
+        ),
+        customdata=hover,
+        showlegend=False,
+        name='',
+    ))
     fig.update_layout(
-        xaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[-3.5, 3.5], fixedrange=True),
-        yaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[-1.6, 1.6], fixedrange=True),
+        xaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[-4.0, 4.0], fixedrange=True),
+        yaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[-2.0, 2.0], fixedrange=True),
         paper_bgcolor='white', plot_bgcolor='#FAFBFC',
-        margin=dict(l=5, r=5, t=5, b=5), height=280,
+        margin=dict(l=10, r=10, t=10, b=10), height=420,
         font=dict(family=FONT_KR),
         dragmode=False,
+        hoverdistance=20,
     )
     return fig
 
@@ -2378,18 +2453,66 @@ def render_report(cd):
 
     # ═══ 01. 워드 클라우드 ═══
     divider("02 · 워드 클라우드")
-    wc1, wc2 = st.columns([3,1])
-    with wc1:
-        fig_wc = plot_wordcloud(df, center_word=label)
-        st.plotly_chart(fig_wc, use_container_width=True, config=cfg())
-    with wc2:
-        st.markdown(f"""<div style='background:#F8F9FA;border-radius:6px;padding:10px;font-family:{FONT_KR};font-size:11px;'>
-        <div style='font-weight:700;color:#003366;margin-bottom:6px;'>범례</div>
-        <div style='margin-bottom:4px;'><span style='color:#C62828;font-weight:700;'>■</span> 부정 키워드</div>
-        <div style='margin-bottom:4px;'><span style='color:#1565C0;font-weight:700;'>■</span> 긍정 키워드</div>
-        <div style='margin-bottom:8px;'><span style='color:#888;font-weight:700;'>■</span> 중립 키워드</div>
-        <div style='font-size:10px;color:#aaa;'>글자 크기 = 언급 빈도<br>커서를 단어에 올리면<br>상세 정보 표시</div>
-        </div>""", unsafe_allow_html=True)
+    # 범례 인라인 표시
+    st.markdown(
+        f"""<div style='display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+        margin-bottom:6px;font-family:{FONT_KR};font-size:11px;color:#888;'>
+          <span style='color:#C62828;font-weight:700;'>■</span> 부정&nbsp;&nbsp;
+          <span style='color:#1565C0;font-weight:700;'>■</span> 긍정&nbsp;&nbsp;
+          <span style='color:#888;font-weight:700;'>■</span> 중립&nbsp;&nbsp;
+          <span style='font-size:10px;color:#aaa;'>| 글자 크기 = 언급 빈도 &nbsp;|&nbsp; 커서를 단어에 올리면 기사 확인</span>
+        </div>""",
+        unsafe_allow_html=True
+    )
+    fig_wc = plot_wordcloud(df, center_word=label)
+    st.plotly_chart(fig_wc, use_container_width=True, config=cfg())
+    # ── 툴팁 좌/우 배치 JS ──
+    components.html("""<script>
+(function() {
+  function attachTooltipFix() {
+    var plots = window.parent.document.querySelectorAll('.js-plotly-plot');
+    plots.forEach(function(plot) {
+      if (plot._wc_fixed) return;
+      plot._wc_fixed = true;
+      plot.addEventListener('mousemove', function(e) {
+        requestAnimationFrame(function() {
+          var layer = plot.querySelector('.hoverlayer');
+          if (!layer) return;
+          var tip = layer.querySelector('g.hovertext');
+          if (!tip) return;
+          var svg = plot.querySelector('svg.main-svg');
+          if (!svg) return;
+          var svgRect = svg.getBoundingClientRect();
+          var mouseX = e.clientX - svgRect.left;
+          var svgW   = svgRect.width;
+          var t = tip.getAttribute('transform') || '';
+          var m = t.match(/translate\(([\d.\-]+)[\s,]+([\d.\-]+)\)/);
+          if (!m) return;
+          var ty = parseFloat(m[2]);
+          var bb = tip.getBBox ? tip.getBBox() : {width:260, height:80};
+          var tipW = bb.width + 20;
+          var tipH = bb.height;
+          var newX, newY;
+          var gap = 12;
+          if (mouseX < svgW * 0.55) {
+            newX = mouseX + gap;
+          } else {
+            newX = mouseX - tipW - gap;
+          }
+          newX = Math.max(4, Math.min(newX, svgW - tipW - 4));
+          newY = Math.max(4, Math.min(e.clientY - svgRect.top - tipH / 2, svgRect.height - tipH - 4));
+          tip.setAttribute('transform', 'translate(' + newX + ',' + newY + ')');
+        });
+      });
+    });
+  }
+  attachTooltipFix();
+  setTimeout(attachTooltipFix, 500);
+  setTimeout(attachTooltipFix, 1500);
+  var obs = new MutationObserver(attachTooltipFix);
+  obs.observe(window.parent.document.body, {childList:true, subtree:true});
+})();
+</script>""", height=0)
 
     # ═══ 02. 언론노출 추이 및 논조 분석 + 키워드 TOP3 ═══
     divider("03 · 언론노출 추이 및 논조 분석")
