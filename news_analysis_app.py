@@ -1770,7 +1770,13 @@ def mhdr(d):
     )
 
 # ── 차트 함수 ──────────────────────────────────────────
-def cfg(): return {'displayModeBar':False}
+def cfg(): return {
+    'displayModeBar': False,
+    'scrollZoom': False,
+    'doubleClick': False,
+    'modeBarButtonsToRemove': ['zoom2d','pan2d','select2d','lasso2d','zoomIn2d','zoomOut2d','autoScale2d','resetScale2d'],
+    'staticPlot': False,
+}
 
 def extract_article_keywords(df, center_word='', top_n=28):
     """실제 기사 헤드라인에서 핵심 명사 추출 (Okt 형태소 분석)"""
@@ -1900,11 +1906,12 @@ def plot_wordcloud(df, center_word='한국전력'):
     ))
     fig.add_annotation(x=0, y=0, text='', showarrow=False)
     fig.update_layout(
-        xaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[-3.5, 3.5]),
-        yaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[-1.6, 1.6]),
+        xaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[-3.5, 3.5], fixedrange=True),
+        yaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[-1.6, 1.6], fixedrange=True),
         paper_bgcolor='white', plot_bgcolor='#FAFBFC',
         margin=dict(l=5, r=5, t=5, b=5), height=280,
         font=dict(family=FONT_KR),
+        dragmode=False,
     )
     return fig
 
@@ -2030,11 +2037,12 @@ def plot_heatmap_with_hover(df):
         showscale=True,
     ))
     fig.update_layout(
-        xaxis=dict(tickangle=-30, side='bottom', tickfont=dict(family=FONT_KR, size=10)),
-        yaxis=dict(autorange='reversed', tickfont=dict(family=FONT_KR, size=10)),
+        xaxis=dict(tickangle=-30, side='bottom', tickfont=dict(family=FONT_KR, size=10), fixedrange=True),
+        yaxis=dict(autorange='reversed', tickfont=dict(family=FONT_KR, size=10), fixedrange=True),
         plot_bgcolor='white', paper_bgcolor='white',
         font=dict(family=FONT_KR, size=10),
         margin=dict(l=90, r=10, t=10, b=70), height=310,
+        dragmode=False,
         annotations=annotations
     )
     return fig
@@ -2717,6 +2725,7 @@ padding:7px 10px;border-radius:0 4px 4px 0;font-size:10px;color:#777;'>
                 font=dict(family=FONT_KR, size=11),
                 margin=dict(l=40, r=10, t=10, b=40), height=240,
                 hovermode="x unified",
+                dragmode=False,
                 xaxis=dict(tickformat="%m/%d", showgrid=False, tickangle=-30,
                            dtick=7*86400000, tickmode="linear"),
                 yaxis=dict(showgrid=True, gridcolor="#f5f5f5", rangemode="tozero"),
@@ -3013,12 +3022,7 @@ with st.sidebar:
         st.session_state["auto_run_done"] = True
 
     with st.form("mf", clear_on_submit=False):
-        kc1s,kc2s = st.columns([5,1])
-        with kc1s: keywords_input = st.text_input("🔍 키워드 (Enter=분석)", "", placeholder="키워드 입력 후 Enter")
-        with kc2s:
-            st.markdown("<div style='padding-top:24px;'>", unsafe_allow_html=True)
-            run = st.form_submit_button("Go", use_container_width=True)
-            st.markdown("</div>", unsafe_allow_html=True)
+        keywords_input = st.text_input("🔍 키워드 (Enter=분석)", "", placeholder="키워드 입력 후 Enter")
         st.caption("쉼표(,)=개별  |  플러스(+)=동시포함")
         st.markdown(
             f"<div style='font-size:10px;color:#E65100;background:#FFF3E0;border-left:3px solid #E65100;"
@@ -3026,10 +3030,20 @@ with st.sidebar:
             f"💡 키워드 1개씩 분석할 때 가장 정확합니다</div>",
             unsafe_allow_html=True
         )
+        st.markdown(
+            "<style>"
+            ".date-row > div[data-testid='stHorizontalBlock'] > div[data-testid='column'] {"
+            "  flex: 1 1 45% !important; min-width: 45% !important;"
+            "}"
+            "</style>"
+            "<div class='date-row'>", unsafe_allow_html=True
+        )
         cs1,cs2 = st.columns(2)
         with cs1: start_date = st.date_input("시작일", datetime.now()-timedelta(days=7))
         with cs2: end_date = st.date_input("종료일", datetime.now())
+        st.markdown("</div>", unsafe_allow_html=True)
         max_articles = st.select_slider("수집 기사 수", [500,1000,2000,3000,5000], value=1000)
+        run = st.form_submit_button("🔍 Go — 분석 시작", use_container_width=True)
 
     st.markdown("---")
     if st.session_state.history:
