@@ -42,5 +42,16 @@
     "company_ticker": "015760.KS",
     "joined_at": "2026-03-23 15:59",
     "start_date": "2026-03-23"
+  },
+  {
+    "email": "hkm7087@gmail.com",
+    "keyword": "현대백화점",
+    "send_hour": 6,
+    "send_minute": 30,
+    "days": 1,
+    "company_name": "현대백화점",
+    "company_ticker": "",
+    "joined_at": "2026-03-23 16:16",
+    "start_date": "2026-03-23"
   }
 ]
