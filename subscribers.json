@@ -31,5 +31,16 @@
     "company_ticker": "000660.KS",
     "joined_at": "2026-03-23 15:56",
     "start_date": "2026-03-23"
+  },
+  {
+    "email": "staatanwalt@naver.com",
+    "keyword": "전기요금",
+    "send_hour": 6,
+    "send_minute": 30,
+    "days": 1,
+    "company_name": "한국전력",
+    "company_ticker": "015760.KS",
+    "joined_at": "2026-03-23 15:59",
+    "start_date": "2026-03-23"
   }
 ]
