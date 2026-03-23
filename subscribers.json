@@ -53,5 +53,16 @@
     "company_ticker": "",
     "joined_at": "2026-03-23 16:16",
     "start_date": "2026-03-23"
+  },
+  {
+    "email": "iamrezzy@daum.net",
+    "keyword": "트럼프",
+    "send_hour": 6,
+    "send_minute": 30,
+    "days": 1,
+    "company_name": "",
+    "company_ticker": "",
+    "joined_at": "2026-03-23 16:17",
+    "start_date": "2026-03-23"
   }
 ]
