@@ -64,5 +64,16 @@
     "company_ticker": "",
     "joined_at": "2026-03-23 16:17",
     "start_date": "2026-03-23"
+  },
+  {
+    "email": "sunjin.im@ahnlab.com",
+    "keyword": "안랩",
+    "send_hour": 6,
+    "send_minute": 30,
+    "days": 1,
+    "company_name": "안랩",
+    "company_ticker": "",
+    "joined_at": "2026-03-23 16:17",
+    "start_date": "2026-03-23"
   }
 ]
